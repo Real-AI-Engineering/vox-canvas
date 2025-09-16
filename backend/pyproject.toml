@@ -1,0 +1,34 @@
+[project]
+name = "vox-workshop-assistant"
+version = "0.1.0"
+description = "FastAPI backend for the AI Workshop Assistant with real-time speech transcription and card generation."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0,<0.116.0",
+  "uvicorn[standard]==0.35.0",
+  "openai[aiohttp]>=1.105.0",
+  "google-cloud-speech>=2.27.0",
+  "vosk>=0.3.45",
+  "structlog>=24.3",
+  "pydantic>=2.10",
+  "anyio>=4.4",
+  "orjson>=3.10",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.6",
+  "pytest>=8.3",
+  "pytest-asyncio>=0.23",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
