@@ -327,9 +327,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async def forward_transcripts() -> None:
             try:
                 async for event in adapter.run(queue_stream(audio_queue)):
-                    payload = {"event": event.type.value, "text": event.text}
-                    if event.confidence is not None:
-                        payload["confidence"] = event.confidence
+                    # Format message for frontend
+                    payload = {
+                        "type": "transcription",
+                        "text": event.text,
+                        "speaker": "Ведущий",  # Default speaker
+                        "confidence": event.confidence if event.confidence is not None else 0.9,
+                        "is_final": event.type is TranscriptEventType.FINAL
+                    }
+
                     should_register = event.type is TranscriptEventType.FINAL
                     fragment = None
                     if should_register:
@@ -337,10 +343,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             "time": datetime.now(timezone.utc).strftime("%H:%M:%S"),
                             "text": event.text,
                             "confidence": event.confidence,
+                            "speaker": "Ведущий",
                             "raw": event.raw,
                         }
                     try:
                         await websocket.send_json(payload)
+                        _log_event(connection_logger, "ws.sent_transcription",
+                                   text_length=len(event.text),
+                                   is_final=should_register)
                     except RuntimeError:
                         if should_register and fragment:
                             await session_manager.register_transcript_fragment(fragment)
@@ -360,19 +370,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 message = await websocket.receive()
                 data = message.get("bytes") or message.get("text")
                 if data is None:
+                    _log_event(connection_logger, "ws.null_data_received", chunk_seq=chunk_seq)
                     continue
                 chunk_seq += 1
                 if isinstance(data, (bytes, bytearray)):
                     data_bytes = bytes(data)
                 else:
                     data_bytes = str(data).encode("utf-8")
-                await audio_queue.put(data_bytes)
+
+                # Log audio chunk details
                 _log_event(
                     connection_logger,
                     "audio.chunk_received",
                     chunk_seq=chunk_seq,
                     size=len(data_bytes),
+                    queue_size=audio_queue.qsize()
                 )
+
+                await audio_queue.put(data_bytes)
         except WebSocketDisconnect:
             _log_event(connection_logger, "ws.close", chunks=chunk_seq, reason="disconnect")
         except Exception as exc:  # pragma: no cover - defensive logging
