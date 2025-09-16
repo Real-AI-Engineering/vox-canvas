@@ -8,9 +8,10 @@ dependencies = [
   "uvicorn[standard]==0.35.0",
   "openai[aiohttp]>=1.105.0",
   "google-cloud-speech>=2.27.0",
-  "vosk>=0.3.45",
+  "vosk>=0.3.45; platform_system != 'Darwin'",
   "structlog>=24.3",
   "pydantic>=2.10",
+  "pydantic-settings>=2.7",
   "anyio>=4.4",
   "orjson>=3.10",
 ]

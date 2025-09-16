@@ -8,6 +8,7 @@ def test_websocket_transcription_stub(monkeypatch):
     monkeypatch.setenv("VOX_CARD_MODE", "stub")
     monkeypatch.setenv("VOX_STT_MODE", "google")
     monkeypatch.setenv("VOX_LANGUAGE", "ru-RU")
+    monkeypatch.setenv("VOX_STT_FORCE_STUB", "1")
     get_settings.cache_clear()  # type: ignore[attr-defined]
 
     app = create_app()

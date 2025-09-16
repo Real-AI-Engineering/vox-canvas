@@ -137,24 +137,30 @@ class GoogleSpeechAdapter(_BaseAdapter):
         super().__init__(logger.bind(engine="google", mode="google-cloud"))
         self.language = language
 
-        # Import credentials here to load them properly
-        from google.oauth2 import service_account
-
-        # Log credentials path for debugging
-        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        logger.info(event="google.init", cred_path=cred_path)
-
         if client is not None:
             # Use provided client (for testing)
             self._client = client
-        elif cred_path and os.path.exists(cred_path):
-            logger.info(event="google.loading_credentials", path=cred_path, size=os.path.getsize(cred_path))
-            credentials = service_account.Credentials.from_service_account_file(cred_path)
-            self._client = speech.SpeechAsyncClient(credentials=credentials)
         else:
-            logger.error(event="google.no_credentials", path=cred_path)
-            # This will use Application Default Credentials
-            self._client = speech.SpeechAsyncClient()
+            # Import credentials here to load them properly
+            from google.oauth2 import service_account
+
+            # Log credentials path for debugging
+            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            logger.info(event="google.init", cred_path=cred_path)
+
+            if cred_path and os.path.exists(cred_path):
+                logger.info(event="google.loading_credentials", path=cred_path, size=os.path.getsize(cred_path))
+                try:
+                    credentials = service_account.Credentials.from_service_account_file(cred_path)
+                    self._client = speech.SpeechAsyncClient(credentials=credentials)
+                    logger.info(event="google.client_created", with_credentials=True)
+                except Exception as e:
+                    logger.error(event="google.credentials_error", error=str(e))
+                    raise
+            else:
+                logger.warning(event="google.no_credentials_file", path=cred_path)
+                # This will use Application Default Credentials
+                self._client = speech.SpeechAsyncClient()
 
         # Support multiple sample rates (browsers typically use 48000 or 44100)
         self._configs = {}
@@ -366,16 +372,16 @@ def create_stt_adapter(
         except Exception as e:
             logger.error(event="stt.credentials_parse_error", error=str(e))
     else:
-        logger.error(event="stt.no_credentials_file", path=credentials_path)
+        logger.warning(event="stt.no_credentials_file", path=credentials_path)
 
-    force_stub = os.getenv("VOX_STT_FORCE_STUB") == "1"
+    force_stub = os.getenv("VOX_STT_FORCE_STUB") == "1"  # Only use stub if explicitly set
     engine_normalized = engine.lower()
     logger.info(event="stt.adapter_config", engine=engine_normalized, force_stub=force_stub, stub_env=os.getenv('VOX_STT_FORCE_STUB'), creds_env=os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
 
     if engine_normalized == "google" and not force_stub:
         if speech is not None:  # pragma: no branch - dependency check
             try:
-                sample_rate = int(os.getenv("VOX_GOOGLE_SAMPLE_RATE", "16000"))
+                sample_rate = int(os.getenv("VOX_GOOGLE_SAMPLE_RATE", "48000"))  # Use 48000 for browser audio
                 logger.info(event="stt.creating_google", language=language, sample_rate=sample_rate)
                 return GoogleSpeechAdapter(language=language, logger=logger, sample_rate=sample_rate)
             except Exception as e:

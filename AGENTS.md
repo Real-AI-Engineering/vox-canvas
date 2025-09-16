@@ -6,6 +6,7 @@
 - **Settings manager** (`app.config.Settings`) centralizes environment flags for repeatable local/dev setups.
 - **Speech provider adapters** (Google Cloud STT or Vosk) plug into a unified stream processor.
 - **OpenAI card composer** builds prompts, calls GPT models, and returns Markdown payloads with optional media hints.
+- **Version hygiene**: устанавливай зависимости только после запроса свежих версий через Context7 (`resolve-library-id` → `get-library-docs`).
 
 ```
 Browser Mic ──▶ Speech Stream Agent ──▶ STT Adapter ──▶ Transcript Bus ──▶ UI
@@ -39,6 +40,7 @@ Browser Mic ──▶ Speech Stream Agent ──▶ STT Adapter ──▶ Transc
 - **Purpose**: Transform prompts + transcript context into Markdown cards using OpenAI GPT models.
 - **Inputs/Outputs**: REST `POST /api/cards` payload; returns `Card` object with Markdown, parsed title, optional media descriptor.
 - **Implementation Hints**: Use `pydantic` models for request/response, store cards in session manager, stream completions where possible (`AsyncOpenAI.responses.stream`). Ship with a `VOX_CARD_MODE=stub` path so the frontend can integrate before real OpenAI wiring.
+- **Resilience**: Default composer enables streaming with exponential backoff retries; errors emit `card.compose_fail` telemetry for the UI.
 - **Fallbacks**: When `VOX_CARD_MODE=openai`, use `app.config.Settings` to authorize the OpenAI client; allow overriding the system prompt via `VOX_CARD_SYSTEM_PROMPT`.
 - **Telemetry**: `card.compose_start`, `card.compose_success`, `card.compose_fail` with latency, token usage, and prompt source (`manual` vs `auto_context`).
 - **Roadmap**: Upgrade to OpenAI Responses streaming with retries and structured error delivery to UI.

@@ -5,10 +5,12 @@ This folder holds the FastAPI backend for the offline-first AI Workshop Assistan
 - Structured startup tracing that emits `boot.*` events for easier diagnostics.
 - Pluggable STT adapters (Google Cloud / Vosk) with stubbed streaming responses via WebSocket so the frontend can integrate early.
   - Emit structured telemetry (`TranscriptEvent.raw`) which the WebSocket test asserts against.
+  - Real engines are auto-selected when dependencies + credentials exist; set `VOX_STT_FORCE_STUB=1` for deterministic behavior.
 - In-memory session manager ready to plug into Google Cloud Speech or Vosk adapters and the OpenAI card composer.
 - Card composer service with a stub implementation (default) plus a factory ready for an OpenAI-backed mode.
   - Set `VOX_CARD_MODE=openai` (requires `openai` package) and optionally `VOX_CARD_SYSTEM_PROMPT` for custom instructions.
   - Failures in OpenAI mode emit `card.compose_fail` logs; see `backend/tests/test_card_composer.py` for stubbing patterns.
+  - Streaming responses with exponential backoff retries are enabled by default.
 
 ## Prerequisites
 - Python 3.12+
@@ -51,6 +53,10 @@ The logs include `audio.chunk_received`, `card.compose_*`, and boot diagnostics 
 | `VOX_CARD_SYSTEM_PROMPT` | Override system prompt for OpenAI composer. | default prompt |
 | `OPENAI_API_KEY`    | Required when `VOX_CARD_MODE=openai`; consumed by OpenAI SDK. | – |
 | `VOX_OPENAI_MODEL`  | Primary OpenAI model identifier.                 | `gpt-4o-mini` |
+| `VOX_STT_FORCE_STUB`| Set to `1` to force stub adapters regardless of installed engines. | unset |
+| `VOX_GOOGLE_SAMPLE_RATE` | Audio sample rate passed to Google STT.     | `16000` |
+| `VOX_VOSK_MODEL_PATH` | Filesystem path to a downloaded Vosk model.    | – |
+| `VOX_VOSK_SAMPLE_RATE` | Sample rate used for Vosk recognition.        | `16000` |
 | `VOX_SESSION_ID`    | Session identifier for log correlation.          | `local`     |
 | `VOX_SESSION_TITLE` | Label exported in `GET /api/export`.             | `AI Workshop` |
 | `VOX_GIT_SHA`       | Optional commit hash for trace logs.             | –           |
@@ -61,6 +67,18 @@ The logs include `audio.chunk_received`, `card.compose_*`, and boot diagnostics 
 ### Session Utilities
 - `POST /api/session/reset` clears transcript and card history in memory.
 - `GET /api/status?debug=1` now surfaces `session.cards` and `session.transcripts` counts.
+
+### Настройка STT движков
+#### Google Cloud Speech-to-Text
+1. Создайте service-account c ролью `Cloud Speech Client` и скачайте JSON ключ.
+2. Поставьте переменную `GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json` перед запуском сервера.
+3. При необходимости задайте частоту дискретизации аудио через `VOX_GOOGLE_SAMPLE_RATE` (по умолчанию `16000`).
+
+#### Vosk (офлайн)
+1. Скачайте русскую модель Vosk (например, `vosk-model-small-ru-0.4`).
+2. Укажите переменную `VOX_VOSK_MODEL_PATH=/absolute/path/to/model`.
+3. При необходимости настройте `VOX_VOSK_SAMPLE_RATE` (по умолчанию `16000`).
+4. Для тестов и CI включайте заглушку: `VOX_STT_FORCE_STUB=1`.
 
 ## Testing
 Initial scaffolding lives under `backend/tests/`.

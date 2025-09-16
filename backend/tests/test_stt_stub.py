@@ -1,5 +1,7 @@
 import asyncio
 
+import os
+
 import pytest
 import structlog
 
@@ -8,6 +10,7 @@ from app.services import TranscriptEventType, create_stt_adapter, queue_stream
 
 @pytest.mark.asyncio
 async def test_stub_adapter_emits_partial_and_final_events():
+    os.environ["VOX_STT_FORCE_STUB"] = "1"
     adapter = create_stt_adapter(
         engine="google",
         language="ru-RU",

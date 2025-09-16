@@ -4,10 +4,10 @@
   "formatters": {
     "json": {
       "()": "structlog.stdlib.ProcessorFormatter",
-      "processor": "structlog.processors.JSONRenderer",
-      "foreign_pre_chain": [
+      "processors": [
         "structlog.processors.TimeStamper",
-        "structlog.stdlib.add_log_level"
+        "structlog.stdlib.add_log_level",
+        "structlog.processors.JSONRenderer"
       ]
     }
   },

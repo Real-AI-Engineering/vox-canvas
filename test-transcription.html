@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transcription Test</title>
+</head>
+<body>
+    <h1>Transcription System Test</h1>
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+    <div id="status">Ready</div>
+    <div id="transcript"></div>
+
+    <script>
+        let ws;
+        let audioContext;
+        let audioInput;
+        let scriptNode;
+        let audioStream;
+        let isRecording = false;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+        const transcript = document.getElementById('transcript');
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                // Get microphone
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Create WebSocket connection
+                ws = new WebSocket('ws://localhost:8000/ws/transcription');
+
+                ws.onopen = () => {
+                    status.textContent = 'WebSocket connected';
+                    console.log('WebSocket connected');
+                    startAudioCapture();
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('Received:', data);
+                    const p = document.createElement('p');
+                    p.textContent = `${data.type || data.event}: ${data.text}`;
+                    transcript.appendChild(p);
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    status.textContent = 'WebSocket error';
+                };
+
+                ws.onclose = () => {
+                    console.log('WebSocket closed');
+                    status.textContent = 'WebSocket closed';
+                };
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } catch (error) {
+                console.error('Error:', error);
+                status.textContent = 'Error: ' + error.message;
+            }
+        });
+
+        function startAudioCapture() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+            audioInput = audioContext.createMediaStreamSource(audioStream);
+            scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
+
+            scriptNode.onaudioprocess = (event) => {
+                if (!isRecording) return;
+
+                const inputData = event.inputBuffer.getChannelData(0);
+                // Convert to PCM16
+                const pcmData = new Int16Array(inputData.length);
+                for (let i = 0; i < inputData.length; i++) {
+                    const s = Math.max(-1, Math.min(1, inputData[i]));
+                    pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(pcmData.buffer);
+                }
+            };
+
+            audioInput.connect(scriptNode);
+            scriptNode.connect(audioContext.destination);
+            isRecording = true;
+            status.textContent = 'Recording...';
+        }
+
+        stopBtn.addEventListener('click', () => {
+            isRecording = false;
+
+            if (scriptNode) {
+                scriptNode.disconnect();
+            }
+            if (audioInput) {
+                audioInput.disconnect();
+            }
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+            if (ws) {
+                ws.close();
+            }
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            status.textContent = 'Stopped';
+        });
+    </script>
+</body>
+</html>

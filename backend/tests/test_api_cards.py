@@ -9,6 +9,7 @@ def _build_app(monkeypatch) -> TestClient:
     monkeypatch.setenv("VOX_CARD_MODE", "stub")
     monkeypatch.delenv("VOX_CARD_SYSTEM_PROMPT", raising=False)
     monkeypatch.setenv("VOX_STT_MODE", "google")
+    monkeypatch.setenv("VOX_STT_FORCE_STUB", "1")
     monkeypatch.setenv("VOX_SESSION_ID", "test-session")
     get_settings.cache_clear()  # type: ignore[attr-defined]
     app = create_app()
