@@ -18,11 +18,18 @@ export interface CardLayout {
   zIndex?: number | null;
 }
 
+export type CardType = "static" | "counter" | "chart" | "list";
+
 export interface SessionCard {
   id: string;
   title: string;
   content: string;
+  type: CardType;
+  prompt: string;
+  updateRule?: string | null;
+  liveData?: Record<string, unknown> | null;
   createdAt: string;
+  updatedAt?: string | null;
   metadata?: Record<string, unknown> | null;
   layout?: CardLayout | null;
 }

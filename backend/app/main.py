@@ -85,6 +85,15 @@ class SessionManager:
                     return card
         return None
 
+    async def update_card(self, card_id: Any, updates: dict[str, Any]) -> dict[str, Any] | None:
+        async with self.lock:
+            for card in self.cards:
+                if str(card.get("cardId") or card.get("id")) == str(card_id):
+                    card.update(updates)
+                    card["updated_at"] = datetime.now(timezone.utc).isoformat()
+                    return card
+        return None
+
     async def get_system_prompt(self) -> str:
         async with self.lock:
             return self.system_prompt
@@ -115,6 +124,8 @@ class CardRequest(BaseModel):
     prompt: str
     context: Optional[str] = None
     layout: Optional[CardLayout] = None
+    type: Optional[str] = Field(default="static")  # static, counter, chart, list
+    update_rule: Optional[str] = None
 
 
 def _resolve_log_level(trace_enabled: bool) -> int:
@@ -249,11 +260,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     card_mode = settings.card_mode
     try:
+        model_name = settings.gemini_model if card_mode == "gemini" else settings.openai_model
         app.state.card_composer = create_card_composer(
             mode=card_mode,
             logger=logger,
-            model=settings.openai_model,
+            model=model_name,
             system_prompt=os.getenv("VOX_CARD_SYSTEM_PROMPT"),
+            api_key=settings.gemini_api_key if card_mode == "gemini" else None,
         )
     except ValueError as exc:  # pragma: no cover - config guard
         logger.error(event="card.composer_error", error=str(exc))
@@ -307,10 +320,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "title": result.content.title,
             "contentMarkdown": result.content.markdown,
             "created_at": created_at,
+            "updated_at": None,
             "image_url": result.content.image_url,
             "prompt": request.prompt,
+            "type": request.type,
+            "update_rule": request.update_rule,
             "context": request.context,
-             "layout": layout_payload,
+            "layout": layout_payload,
             "metadata": result.metadata,
         }
         stored_card = await app.state.session_manager.register_card(card_payload)
@@ -351,6 +367,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         if not updated:
             raise HTTPException(status_code=404, detail="Card not found")
+        return updated
+
+    @api_router.put("/cards/{card_id}")
+    async def update_card(card_id: str, request: CardRequest) -> dict[str, Any]:
+        updates = {
+            "prompt": request.prompt,
+            "type": request.type,
+            "update_rule": request.update_rule,
+        }
+        if request.context is not None:
+            updates["context"] = request.context
+        if request.layout is not None:
+            updates["layout"] = request.layout.model_dump(by_alias=True)
+
+        updated = await app.state.session_manager.update_card(card_id, updates)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Card not found")
+
+        _log_event(logger, "card.updated", card_id=card_id)
         return updated
 
     @api_router.get("/export")

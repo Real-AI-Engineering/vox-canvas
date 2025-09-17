@@ -1,9 +1,9 @@
 import { create } from "zustand";
 
 import { AudioRecorder } from "../services/audioRecorder";
-import { demoCards, demoTranscripts } from "../data/demo";
 import type {
   CardLayout,
+  CardType,
   ConnectionStatus,
   SessionCard,
   SessionState,
@@ -19,6 +19,7 @@ const DEFAULT_SYSTEM_PROMPT =
 interface CreateCardOptions {
   context?: string;
   layout?: CardLayout;
+  type?: CardType;
 }
 
 interface SessionStore {
@@ -38,6 +39,7 @@ interface SessionStore {
   resetSession: () => Promise<void>;
   fetchInitialData: () => Promise<void>;
   createCard: (prompt: string, options?: CreateCardOptions) => Promise<void>;
+  updateCard: (cardId: string, updates: Partial<SessionCard>) => Promise<void>;
   updateCardLayout: (cardId: string, layout: CardLayout) => Promise<void>;
   setSystemPrompt: (value: string) => void;
   saveSystemPrompt: (value: string) => Promise<void>;
@@ -64,9 +66,9 @@ const audioRecorder = new AudioRecorder();
 export const useSessionStore = create<SessionStore>((set, get) => ({
   sessionState: "idle",
   connectionStatus: "disconnected",
-  transcripts: demoTranscripts,
-  cards: demoCards,
-  activeCardId: demoCards.at(-1)?.id ?? null,
+  transcripts: [],
+  cards: [],
+  activeCardId: null,
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   isFetching: false,
   isSavingSystemPrompt: false,
@@ -119,13 +121,29 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
       if (cardsRes.ok) {
         const data = await cardsRes.json();
-        const cards: SessionCard[] = data.cards ?? data ?? [];
+        const rawCards = data.cards ?? data ?? [];
+        // Transform backend format to frontend format
+        const cards: SessionCard[] = rawCards.map((card: any) => ({
+          id: String(card.cardId ?? card.id),
+          title: card.title,
+          content: card.contentMarkdown ?? card.content,
+          type: card.type ?? "static",
+          prompt: card.prompt,
+          updateRule: card.update_rule ?? card.updateRule ?? null,
+          liveData: card.liveData ?? null,
+          createdAt: card.created_at ?? card.createdAt,
+          updatedAt: card.updated_at ?? card.updatedAt ?? null,
+          metadata: card.metadata ?? null,
+          layout: card.layout ?? null,
+        }));
+        console.log('Loaded cards from backend:', cards);
         set({ cards, activeCardId: cards.at(-1)?.id ?? null });
       }
 
       if (transcriptRes.ok) {
         const data = await transcriptRes.json();
         const transcript: TranscriptFragment[] = data.transcript ?? data ?? [];
+        console.log('Loaded transcripts from backend:', transcript);
         set({ transcripts: transcript });
       }
 
@@ -156,6 +174,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           prompt,
           context: options?.context,
           layout: options?.layout,
+          type: options?.type ?? "static",
+          update_rule: options?.type === "counter" ? prompt : null,
         }),
       });
       if (!response.ok) {
@@ -166,10 +186,17 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         id: String(payload.cardId ?? payload.id ?? `card-${Date.now()}`),
         title: payload.title ?? "Карточка",
         content: payload.contentMarkdown ?? payload.content ?? "",
+        type: payload.type ?? options?.type ?? "static",
+        prompt: prompt,
+        updateRule: options?.type === "counter" ? prompt : (payload.updateRule ?? null),
+        liveData: payload.liveData ?? null,
         createdAt: payload.created_at ?? payload.createdAt ?? new Date().toISOString(),
+        updatedAt: null,
         metadata: payload.metadata ?? null,
         layout: payload.layout ?? options?.layout ?? null,
       };
+      console.log('Created new card:', newCard);
+      console.log('Card type:', newCard.type, 'Update rule:', newCard.updateRule);
       set({
         cards: [...state.cards, newCard],
         activeCardId: newCard.id,
@@ -181,6 +208,31 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         error: error instanceof Error ? error.message : String(error),
         isFetching: false,
       });
+    }
+  },
+  updateCard: async (cardId, updates) => {
+    set((state) => ({
+      cards: state.cards.map((card) =>
+        card.id === cardId
+          ? { ...card, ...updates, updatedAt: new Date().toISOString() }
+          : card
+      ),
+    }));
+    try {
+      const payload = {
+        prompt: updates.prompt,
+        type: updates.type || "static",
+        update_rule: updates.updateRule || null,
+        context: updates.context || null,
+      };
+      await fetch(buildUrl(`/api/cards/${encodeURIComponent(cardId)}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.warn("Failed to update card", error);
+      set({ error: error instanceof Error ? error.message : String(error) });
     }
   },
   updateCardLayout: async (cardId, layout) => {

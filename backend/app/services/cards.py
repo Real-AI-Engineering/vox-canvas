@@ -164,12 +164,20 @@ def create_card_composer(
     *,
     model: str,
     system_prompt: str | None = None,
+    api_key: str | None = None,
 ) -> CardComposer:
     mode_normalized = mode.lower()
     if mode_normalized == "stub":
         return StubCardComposer(logger=logger)
     if mode_normalized == "openai":  # pragma: no cover - external call
         return OpenAICardComposer(logger=logger, model=model, system_prompt=system_prompt)
+    if mode_normalized == "gemini":
+        try:
+            from .gemini_composer import GeminiCardComposer
+            return GeminiCardComposer(logger=logger, model=model, api_key=api_key)
+        except ImportError:
+            logger.error("gemini-composer import failed, falling back to stub")
+            return StubCardComposer(logger=logger)
     raise ValueError(f"Unknown card composer mode: {mode}")
 
 

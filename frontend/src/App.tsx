@@ -4,16 +4,17 @@ import { toast } from "sonner";
 
 import {
   CardCarousel,
+  CardCreationModal,
   ConnectionBadge,
+  DynamicCard,
   EmptyState,
   ReconnectionBanner,
   SessionStatus,
-  StickyCard,
   ToastProvider,
   TranscriptList,
 } from "./components";
 import { useSessionStore } from "./state/sessionStore";
-import type { CardLayout } from "./types/session";
+import type { CardLayout, CardType, SessionCard } from "./types/session";
 
 const ERROR_TOAST_ID = "session-error";
 
@@ -56,6 +57,7 @@ export default function App() {
     toggleSession,
     resetSession,
     createCard,
+    updateCard,
     updateCardLayout,
     setActiveCard,
     fetchInitialData,
@@ -63,8 +65,8 @@ export default function App() {
     saveSystemPrompt,
   } = useSessionStore();
 
-  const [cardPrompt, setCardPrompt] = useState("");
-  const [useTranscriptContext, setUseTranscriptContext] = useState(true);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [editingCard, setEditingCard] = useState<SessionCard | null>(null);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [showTranscriptPanel, setShowTranscriptPanel] = useState(false);
   const [promptDraft, setPromptDraft] = useState(systemPrompt);
@@ -91,12 +93,12 @@ export default function App() {
   const activeCard = useMemo(() => cards.find((card) => card.id === activeCardId) ?? null, [cards, activeCardId]);
 
   const transcriptContext = useMemo(() => {
-    if (!useTranscriptContext || transcripts.length === 0) return undefined;
+    if (transcripts.length === 0) return undefined;
     return transcripts
       .slice(-5)
       .map((fragment) => fragment.text)
       .join(" \n");
-  }, [transcripts, useTranscriptContext]);
+  }, [transcripts]);
 
   const nextCardLayout = (): CardLayout => {
     const baseX = 80 + cards.length * 30;
@@ -110,17 +112,30 @@ export default function App() {
     };
   };
 
-  const handleCreateCard = async () => {
-    const prompt = cardPrompt.trim();
-    if (!prompt) {
-      toast.error("Введите запрос для карточки");
-      return;
-    }
+  const handleCreateCard = async (prompt: string, cardType: CardType) => {
     await createCard(prompt, {
       context: transcriptContext,
       layout: nextCardLayout(),
+      type: cardType,
     });
-    setCardPrompt("");
+  };
+
+  const handleEditCard = (card: SessionCard) => {
+    setEditingCard(card);
+    setShowCardModal(true);
+  };
+
+  const handleUpdateCard = async (prompt: string, cardType: CardType) => {
+    if (!editingCard) return;
+    const updateRule = cardType === "counter" ? prompt : undefined;
+    await updateCard(editingCard.id, {
+      prompt,
+      type: cardType,
+      updateRule,
+      content: editingCard.content,
+      updatedAt: new Date().toISOString(),
+    });
+    setEditingCard(null);
   };
 
   const handleSavePrompt = async () => {
@@ -148,10 +163,15 @@ export default function App() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <ControlButton
-                label={sessionState === "listening" ? "Поставить на паузу" : "Начать запись"}
-                onClick={toggleSession}
+                label="Новая карточка"
+                onClick={() => setShowCardModal(true)}
               />
-              <ControlButton label="Сбросить сессию" onClick={resetSession} variant="ghost" disabled={isFetching} />
+              <ControlButton
+                label={sessionState === "listening" ? "Пауза" : "Запись"}
+                onClick={toggleSession}
+                variant="ghost"
+              />
+              <ControlButton label="Сброс" onClick={resetSession} variant="ghost" disabled={isFetching} />
               <ControlButton
                 label="Система"
                 onClick={() => setShowPromptEditor(true)}
@@ -180,26 +200,6 @@ export default function App() {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <textarea
-              value={cardPrompt}
-              onChange={(event) => setCardPrompt(event.target.value)}
-              placeholder="Опишите, какую карточку сгенерировать"
-              className="min-h-[72px] flex-1 resize-y rounded-xl border border-white/10 bg-canvas-background/60 p-3 text-sm text-white outline-none focus:border-canvas-accent"
-            />
-            <div className="flex w-full flex-col gap-3 sm:w-auto">
-              <label className="inline-flex items-center gap-2 text-xs text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={useTranscriptContext}
-                  onChange={(event) => setUseTranscriptContext(event.target.checked)}
-                  className="rounded border-white/20 bg-white/5 text-canvas-accent focus:ring-canvas-accent"
-                />
-                Использовать недавний транскрипт
-              </label>
-              <ControlButton label="Создать карточку" onClick={handleCreateCard} disabled={isFetching} />
-            </div>
-          </div>
         </header>
 
         <main className="relative flex-1 overflow-hidden rounded-3xl border border-white/10 bg-canvas-surface/40 backdrop-blur">
@@ -211,7 +211,12 @@ export default function App() {
           ) : (
             <div className="relative h-full w-full">
               {cards.map((card) => (
-                <StickyCard key={card.id} card={card} onLayoutChange={updateCardLayout} />
+                <DynamicCard
+                  key={card.id}
+                  card={card}
+                  onLayoutChange={updateCardLayout}
+                  onEdit={handleEditCard}
+                />
               ))}
             </div>
           )}
@@ -278,6 +283,16 @@ export default function App() {
           </div>
         </aside>
       )}
+
+      <CardCreationModal
+        isOpen={showCardModal}
+        onClose={() => {
+          setShowCardModal(false);
+          setEditingCard(null);
+        }}
+        onCreateCard={editingCard ? handleUpdateCard : handleCreateCard}
+        isLoading={isFetching}
+      />
     </div>
   );
 }

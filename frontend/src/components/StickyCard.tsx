@@ -14,9 +14,10 @@ const DEFAULT_LAYOUT: CardLayout = {
 interface StickyCardProps {
   card: SessionCard;
   onLayoutChange: (id: string, layout: CardLayout) => void;
+  onEdit?: (card: SessionCard) => void;
 }
 
-export function StickyCard({ card, onLayoutChange }: StickyCardProps) {
+export function StickyCard({ card, onLayoutChange, onEdit }: StickyCardProps) {
   const layout = card.layout ?? DEFAULT_LAYOUT;
 
   const handleChange = useCallback(
@@ -56,9 +57,19 @@ export function StickyCard({ card, onLayoutChange }: StickyCardProps) {
       <article className="flex h-full w-full flex-col rounded-3xl bg-white/10 p-4 text-sm shadow-lg shadow-canvas-accent/30 backdrop-blur">
         <header className="flex items-center justify-between gap-2 pb-2">
           <h3 className="text-base font-semibold text-white/90">{card.title}</h3>
-          <time className="text-xs text-slate-300">
-            {new Date(card.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </time>
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(card)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white/60 hover:text-white"
+              >
+                ✏️
+              </button>
+            )}
+            <time className="text-xs text-slate-300">
+              {new Date(card.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </time>
+          </div>
         </header>
         <div className="prose prose-invert max-w-none flex-1 overflow-auto text-sm">
           <ReactMarkdown>{card.content}</ReactMarkdown>
