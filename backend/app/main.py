@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 import structlog
 from fastapi import APIRouter, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .services import (
@@ -250,6 +251,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     trace_enabled = settings.trace_enabled
     logger = _setup_logging(trace_enabled, settings.logging_config)
     app = FastAPI(title=settings.app_name, version=APP_VERSION)
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     app.state.logger = logger
     app.state.trace_until = (
