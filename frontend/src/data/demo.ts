@@ -27,11 +27,13 @@ export const demoCards: SessionCard[] = [
     title: "Архитектура воркшопа",
     content: `# Архитектура воркшопа\n- Фронтенд на React отображает карточки и транскрипт.\n- WebSocket поток обрабатывает аудио и обновления.\n- FastAPI координирует STT и генерацию контента.`,
     createdAt: new Date().toISOString(),
+    layout: { x: 80, y: 60, width: 320, height: 240, zIndex: 1 },
   },
   {
     id: "demo-c-2",
     title: "Задачи MVP",
     content: `# Задачи MVP\n- Реальное время: минимальная задержка между речью и текстом.\n- Контроль сессии: старт/стоп записи, экспорт JSON.\n- Визуализация: крупные карточки + навигация для аудитории.`,
     createdAt: new Date().toISOString(),
+    layout: { x: 440, y: 180, width: 320, height: 240, zIndex: 2 },
   },
 ];

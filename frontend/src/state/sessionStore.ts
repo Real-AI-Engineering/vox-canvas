@@ -1,8 +1,9 @@
 import { create } from "zustand";
 
-import { demoCards, demoTranscripts } from "../data/demo";
 import { AudioRecorder } from "../services/audioRecorder";
+import { demoCards, demoTranscripts } from "../data/demo";
 import type {
+  CardLayout,
   ConnectionStatus,
   SessionCard,
   SessionState,
@@ -10,6 +11,15 @@ import type {
 } from "../types/session";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const DEFAULT_SYSTEM_PROMPT =
+  "Assume the user is speaking Russian. You are an AI assistant that generates a summary " +
+  "card from the provided content or question. The card should be written in Russian. Provide a " +
+  "concise heading and a brief list of key points. Format the output in Markdown.";
+
+interface CreateCardOptions {
+  context?: string;
+  layout?: CardLayout;
+}
 
 interface SessionStore {
   sessionState: SessionState;
@@ -17,7 +27,9 @@ interface SessionStore {
   transcripts: TranscriptFragment[];
   cards: SessionCard[];
   activeCardId: string | null;
+  systemPrompt: string;
   isFetching: boolean;
+  isSavingSystemPrompt: boolean;
   error: string | null;
   pendingFragmentId: string | null;
   cleanupSocket: (() => void) | null;
@@ -25,7 +37,10 @@ interface SessionStore {
   toggleSession: () => void;
   resetSession: () => Promise<void>;
   fetchInitialData: () => Promise<void>;
-  createCardFromContext: () => Promise<void>;
+  createCard: (prompt: string, options?: CreateCardOptions) => Promise<void>;
+  updateCardLayout: (cardId: string, layout: CardLayout) => Promise<void>;
+  setSystemPrompt: (value: string) => void;
+  saveSystemPrompt: (value: string) => Promise<void>;
   connectTranscription: () => () => void;
 }
 
@@ -49,10 +64,12 @@ const audioRecorder = new AudioRecorder();
 export const useSessionStore = create<SessionStore>((set, get) => ({
   sessionState: "idle",
   connectionStatus: "disconnected",
-  transcripts: [],
-  cards: [],
-  activeCardId: null,
+  transcripts: demoTranscripts,
+  cards: demoCards,
+  activeCardId: demoCards.at(-1)?.id ?? null,
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
   isFetching: false,
+  isSavingSystemPrompt: false,
   error: null,
   pendingFragmentId: null,
   cleanupSocket: null,
@@ -94,9 +111,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   fetchInitialData: async () => {
     set({ isFetching: true, error: null });
     try {
-      const [cardsRes, transcriptRes] = await Promise.all([
+      const [cardsRes, transcriptRes, promptRes] = await Promise.all([
         fetch(buildUrl("/api/cards")),
         fetch(buildUrl("/api/transcript")),
+        fetch(buildUrl("/api/system-prompt")),
       ]);
 
       if (cardsRes.ok) {
@@ -110,6 +128,13 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         const transcript: TranscriptFragment[] = data.transcript ?? data ?? [];
         set({ transcripts: transcript });
       }
+
+      if (promptRes.ok) {
+        const data = await promptRes.json();
+        if (typeof data.system_prompt === "string") {
+          set({ systemPrompt: data.system_prompt });
+        }
+      }
     } catch (error) {
       console.warn("Using demo data due to fetch error", error);
       set({
@@ -120,27 +145,22 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       set({ isFetching: false });
     }
   },
-  createCardFromContext: async () => {
+  createCard: async (prompt, options) => {
     const state = get();
-    const { transcripts, cards } = state;
-    const prompt = transcripts
-      .slice(-3)
-      .map((fragment) => fragment.text)
-      .join(" ")
-      .trim();
-
     try {
       set({ isFetching: true, error: null });
       const response = await fetch(buildUrl("/api/cards"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt || "Сформируй карточку по последней теме." }),
+        body: JSON.stringify({
+          prompt,
+          context: options?.context,
+          layout: options?.layout,
+        }),
       });
-
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
       }
-
       const payload = await response.json();
       const newCard: SessionCard = {
         id: String(payload.cardId ?? payload.id ?? `card-${Date.now()}`),
@@ -148,28 +168,54 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         content: payload.contentMarkdown ?? payload.content ?? "",
         createdAt: payload.created_at ?? payload.createdAt ?? new Date().toISOString(),
         metadata: payload.metadata ?? null,
+        layout: payload.layout ?? options?.layout ?? null,
       };
-
       set({
-        cards: [...cards, newCard],
+        cards: [...state.cards, newCard],
         activeCardId: newCard.id,
         isFetching: false,
-        error: null,
       });
     } catch (error) {
-      console.warn("Failed to create card, using fallback", error);
-      const fallback: SessionCard = {
-        id: `fallback-${Date.now()}`,
-        title: "Локальная карточка",
-        content: `# Локальная карточка\n- Используйте API, чтобы заменить заглушку.\n- Время: ${nowLabel()}\n- Контекст: ${prompt || "нет данных"}.`,
-        createdAt: new Date().toISOString(),
-      };
+      console.warn("Failed to create card", error);
       set({
-        cards: [...cards, fallback],
-        activeCardId: fallback.id,
-        isFetching: false,
         error: error instanceof Error ? error.message : String(error),
+        isFetching: false,
       });
+    }
+  },
+  updateCardLayout: async (cardId, layout) => {
+    set((state) => ({
+      cards: state.cards.map((card) => (card.id === cardId ? { ...card, layout } : card)),
+    }));
+    try {
+      await fetch(buildUrl(`/api/cards/${encodeURIComponent(cardId)}`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(layout),
+      });
+    } catch (error) {
+      console.warn("Failed to persist layout", error);
+      set({ error: error instanceof Error ? error.message : String(error) });
+    }
+  },
+  setSystemPrompt: (value) => set({ systemPrompt: value }),
+  saveSystemPrompt: async (value) => {
+    set({ isSavingSystemPrompt: true, error: null });
+    try {
+      const response = await fetch(buildUrl("/api/system-prompt"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ system_prompt: value }),
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      set({ systemPrompt: value });
+    } catch (error) {
+      console.warn("Failed to save system prompt", error);
+      set({ error: error instanceof Error ? error.message : String(error) });
+    } finally {
+      set({ isSavingSystemPrompt: false });
     }
   },
   connectTranscription: () => {
@@ -190,6 +236,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       return () => undefined;
     }
 
+    set({ connectionStatus: "connecting", cleanupSocket: null });
+
     // Set up audio recorder to send data via WebSocket
     audioRecorder.onData((audioData) => {
       if (socket && socket.readyState === WebSocket.OPEN) {
@@ -197,39 +245,43 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       }
     });
 
-    set({ connectionStatus: "connecting", cleanupSocket: null });
-
     const cleanup = () => {
       closed = true;
       socket?.close();
-      set({ connectionStatus: "disconnected" });
+      useSessionStore.setState({ connectionStatus: "disconnected", cleanupSocket: null });
     };
 
     socket.addEventListener("open", () => {
       if (closed) return;
-      set({ connectionStatus: "connected", error: null, cleanupSocket: cleanup });
+      useSessionStore.setState({ connectionStatus: "connected", error: null, cleanupSocket: cleanup });
     });
 
     socket.addEventListener("message", (event) => {
       if (closed) return;
       try {
         const payload = JSON.parse(event.data);
-        console.log("WebSocket message received:", payload); // Debug log
+        const text: string | undefined = payload.text;
+        const eventType: string | undefined = payload.event ?? payload.type;
+        const confidence: number | undefined = payload.confidence ?? payload.confidence_score;
+        const isFinalFlag =
+          payload.is_final === true ||
+          payload.final === true ||
+          eventType === "transcript" ||
+          eventType === "final";
 
-        // Check different message formats from backend
-        const { type, event: eventType, text, confidence, is_final } = payload;
+        if (!text) {
+          return;
+        }
 
-        if (!text) return;
-
-        // Handle different event types: "transcription" with is_final flag, or legacy "transcript"/"final"
-        const isFinal = is_final || type === "transcription" && is_final === true || eventType === "transcript" || eventType === "final";
         const timestamp = nowLabel();
-        set((state) => {
+
+        // Use useSessionStore.setState directly to avoid closure issues
+        useSessionStore.setState((state) => {
           const partialId = state.pendingFragmentId;
-          if (!isFinal) {
-            // For partial transcripts, update existing pending fragment or create new one
+
+          if (!isFinalFlag) {
             const id = partialId ?? `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-            const partialFragment: TranscriptFragment = {
+            const fragment: TranscriptFragment = {
               id,
               time: timestamp,
               text,
@@ -238,8 +290,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             };
 
             const transcripts = partialId
-              ? state.transcripts.map((fragment) => (fragment.id === partialId ? partialFragment : fragment))
-              : [...state.transcripts, partialFragment];
+              ? state.transcripts.map((item) => (item.id === partialId ? fragment : item))
+              : [...state.transcripts, fragment];
 
             return {
               transcripts: transcripts.slice(-200),
@@ -247,10 +299,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             };
           }
 
-          // For final transcripts, replace pending or add new
-          const finalId = partialId ?? `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          const id = partialId ?? `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
           const finalFragment: TranscriptFragment = {
-            id: finalId,
+            id,
             time: timestamp,
             text,
             speaker: "Live",
@@ -258,7 +309,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           };
 
           const transcripts = partialId
-            ? state.transcripts.map((fragment) => (fragment.id === partialId ? finalFragment : fragment))
+            ? state.transcripts.map((item) => (item.id === partialId ? finalFragment : item))
             : [...state.transcripts, finalFragment];
 
           return {
@@ -273,16 +324,12 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
     socket.addEventListener("close", () => {
       if (closed) return;
-      set({ connectionStatus: "disconnected", error: "WebSocket соединение закрыто", cleanupSocket: null });
+      useSessionStore.setState({ connectionStatus: "disconnected", error: "WebSocket соединение закрыто", cleanupSocket: null });
     });
 
     socket.addEventListener("error", (event) => {
       console.error("WebSocket error", event);
-      set({
-        connectionStatus: "error",
-        error: "Ошибка соединения с трансляцией",
-        cleanupSocket: null,
-      });
+      useSessionStore.setState({ connectionStatus: "error", error: "Ошибка соединения с трансляцией", cleanupSocket: null });
     });
 
     set({ cleanupSocket: cleanup });

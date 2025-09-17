@@ -67,6 +67,8 @@ The logs include `audio.chunk_received`, `card.compose_*`, and boot diagnostics 
 ### Session Utilities
 - `POST /api/session/reset` clears transcript and card history in memory.
 - `GET /api/status?debug=1` now surfaces `session.cards` and `session.transcripts` counts.
+- `GET /api/system-prompt` / `PUT /api/system-prompt` — получить или обновить системный промпт для генерации карточек.
+- `PATCH /api/cards/{cardId}` — сохранить изменения макета карточки (позиция/размер на холсте).
 
 ### Настройка STT движков
 #### Google Cloud Speech-to-Text
@@ -103,6 +105,6 @@ uv run python scripts/dev_smoke.py
 ```
 
 ## Next Steps
-1. Implement Google Cloud Speech and Vosk adapters that feed transcripts into `SessionManager.register_transcript_fragment` with confidence/timing metadata.
-2. Replace the card stub with real OpenAI `responses` streaming, add retries, and surface `card.compose_fail` telemetry.
-3. Fill out end-to-end smoke tests (audio replay + export verification) and wire CI to run `make check`.
+1. Подключить реальные сервисы STT (Google/Vosk) и протестировать потоковую транскрипцию с аудиопотоком браузера.
+2. Включить OpenAI Responses streaming в прод окружении + кэширование/логирование токенов.
+3. Настроить end-to-end смоук-тест (аудио → транскрипт → карточка) и запуск `make check` в CI.

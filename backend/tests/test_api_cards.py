@@ -21,13 +21,18 @@ def test_create_card_returns_stub_content(monkeypatch):
     with client:
         response = client.post(
             "/api/cards",
-            json={"prompt": "Карточка тест", "context": None},
+            json={
+                "prompt": "Карточка тест",
+                "context": "Контекст",
+                "layout": {"x": 10, "y": 20, "width": 200, "height": 180},
+            },
         )
     assert response.status_code == 200
     body = response.json()
     assert body["title"] == "Карточка тест"
     assert "Заглушка" in body["contentMarkdown"]
     assert body["metadata"]["mode"] == "stub"
+    assert body["layout"] == {"x": 10, "y": 20, "width": 200, "height": 180, "zIndex": None, "rotation": None}
 
 
 def test_export_contains_cards(monkeypatch):
@@ -68,3 +73,33 @@ def test_reset_session(monkeypatch):
     payload = reset_response.json()
     assert payload["status"] == "reset"
     assert payload["session"] == {"cards": 0, "transcripts": 0}
+
+
+def test_system_prompt_roundtrip(monkeypatch):
+    client = _build_app(monkeypatch)
+    with client:
+        get_response = client.get("/api/system-prompt")
+        assert get_response.status_code == 200
+        default_prompt = get_response.json()["system_prompt"]
+        new_prompt = default_prompt + "\nДополнение."
+        put_response = client.put("/api/system-prompt", json={"system_prompt": new_prompt})
+        assert put_response.status_code == 200
+        assert put_response.json()["system_prompt"] == new_prompt
+
+
+def test_update_card_layout(monkeypatch):
+    client = _build_app(monkeypatch)
+    with client:
+        create_response = client.post(
+            "/api/cards",
+            json={"prompt": "Layout", "context": None},
+        )
+        card_id = str(create_response.json()["cardId"])
+        patch_response = client.patch(
+            f"/api/cards/{card_id}",
+            json={"x": 100, "y": 120, "width": 240, "height": 220, "zIndex": 3},
+        )
+    assert patch_response.status_code == 200
+    data = patch_response.json()
+    assert data["layout"]["x"] == 100
+    assert data["layout"]["zIndex"] == 3

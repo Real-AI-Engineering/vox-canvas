@@ -10,11 +10,11 @@ import platform
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 import structlog
-from fastapi import APIRouter, FastAPI, Request, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
+from fastapi import APIRouter, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel, Field
 
 from .services import (
     CardRequestPayload,
@@ -34,6 +34,13 @@ APP_VERSION = "0.1.0"
 TRACE_WINDOW_SECONDS = 60
 
 
+DEFAULT_SYSTEM_PROMPT = (
+    "Assume the user is speaking Russian. You are an AI assistant that generates a summary "
+    "card from the provided content or question. The card should be written in Russian. Provide a "
+    "concise heading and a brief list of key points. Format the output in Markdown."
+)
+
+
 @dataclass
 class SessionManager:
     """In-memory session state with lightweight locking."""
@@ -42,6 +49,7 @@ class SessionManager:
     transcript: list[dict[str, Any]] = field(default_factory=list)
     cards: list[dict[str, Any]] = field(default_factory=list)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    system_prompt: str = DEFAULT_SYSTEM_PROMPT
 
     async def reset(self) -> None:
         async with self.lock:
@@ -69,14 +77,44 @@ class SessionManager:
         async with self.lock:
             self.transcript.append(fragment)
 
+    async def update_card_layout(self, card_id: Any, layout: dict[str, Any]) -> dict[str, Any] | None:
+        async with self.lock:
+            for card in self.cards:
+                if str(card.get("cardId") or card.get("id")) == str(card_id):
+                    card["layout"] = layout
+                    return card
+        return None
+
+    async def get_system_prompt(self) -> str:
+        async with self.lock:
+            return self.system_prompt
+
+    async def set_system_prompt(self, value: str) -> str:
+        async with self.lock:
+            self.system_prompt = value
+            return self.system_prompt
+
     async def counts(self) -> dict[str, int]:
         async with self.lock:
             return {"cards": len(self.cards), "transcripts": len(self.transcript)}
 
 
+class CardLayout(BaseModel):
+    x: float
+    y: float
+    width: float
+    height: float
+    rotation: float | None = None
+    z_index: int | None = Field(default=None, alias="zIndex")
+
+    class Config:
+        populate_by_name = True
+
+
 class CardRequest(BaseModel):
     prompt: str
-    context: str | None = None
+    context: Optional[str] = None
+    layout: Optional[CardLayout] = None
 
 
 def _resolve_log_level(trace_enabled: bool) -> int:
@@ -240,11 +278,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         snapshot = await app.state.session_manager.snapshot()
         return {"transcript": snapshot["transcript"]}
 
-    @api_router.get("/cards")
-    async def list_cards() -> dict[str, Any]:
-        snapshot = await app.state.session_manager.snapshot()
-        return {"cards": snapshot["cards"]}
-
     @api_router.post("/session/reset")
     async def reset_session() -> dict[str, Any]:
         await app.state.session_manager.reset()
@@ -259,10 +292,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _log_event(card_logger, "card.compose_start", source="manual")
 
         composer = app.state.card_composer
-        payload = CardRequestPayload(prompt=request.prompt, context=request.context)
-        result = await composer.compose(payload)
+        system_prompt = await app.state.session_manager.get_system_prompt()
+        payload = CardRequestPayload(
+            prompt=request.prompt,
+            context=request.context,
+            system_prompt=system_prompt,
+        )
+        result = await composer.compose(payload, system_prompt=system_prompt)
 
         created_at = result.content.created_at.isoformat()
+        layout_payload = request.layout.model_dump(by_alias=True) if request.layout else None
         card_payload = {
             "cardId": len(app.state.session_manager.cards) + 1,
             "title": result.content.title,
@@ -271,6 +310,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "image_url": result.content.image_url,
             "prompt": request.prompt,
             "context": request.context,
+             "layout": layout_payload,
             "metadata": result.metadata,
         }
         stored_card = await app.state.session_manager.register_card(card_payload)
@@ -284,6 +324,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             composer_mode=result.metadata.get("mode"),
         )
         return stored_card
+
+    @api_router.get("/cards")
+    async def list_cards() -> dict[str, Any]:
+        snapshot = await app.state.session_manager.snapshot()
+        return {"cards": snapshot["cards"]}
+
+    @api_router.get("/system-prompt")
+    async def get_system_prompt() -> dict[str, Any]:
+        value = await app.state.session_manager.get_system_prompt()
+        return {"system_prompt": value}
+
+    @api_router.put("/system-prompt")
+    async def update_system_prompt(payload: dict[str, str]) -> dict[str, Any]:
+        new_prompt = payload.get("system_prompt")
+        if new_prompt is None:
+            raise HTTPException(status_code=400, detail="system_prompt is required")
+        value = await app.state.session_manager.set_system_prompt(new_prompt)
+        _log_event(logger, "system_prompt.updated")
+        return {"system_prompt": value}
+
+    @api_router.patch("/cards/{card_id}")
+    async def update_card_layout(card_id: str, payload: CardLayout) -> dict[str, Any]:
+        updated = await app.state.session_manager.update_card_layout(
+            card_id, payload.model_dump(by_alias=True)
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="Card not found")
+        return updated
 
     @api_router.get("/export")
     async def export() -> ORJSONResponse:

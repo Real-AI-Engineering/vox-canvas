@@ -19,6 +19,7 @@ except ImportError:  # pragma: no cover - optional dependency
 class CardRequestPayload:
     prompt: str
     context: str | None = None
+    system_prompt: str | None = None
 
 
 @dataclass(slots=True)
@@ -37,7 +38,7 @@ class CardResult:
 
 
 class CardComposer(Protocol):
-    async def compose(self, payload: CardRequestPayload) -> CardResult:  # pragma: no cover - interface
+    async def compose(self, payload: CardRequestPayload, *, system_prompt: str | None = None) -> CardResult:  # pragma: no cover - interface
         ...
 
 
@@ -47,7 +48,7 @@ class StubCardComposer:
     def __init__(self, logger: structlog.stdlib.BoundLogger) -> None:
         self._logger = logger.bind(agent="card-composer", mode="stub")
 
-    async def compose(self, payload: CardRequestPayload) -> CardResult:
+    async def compose(self, payload: CardRequestPayload, *, system_prompt: str | None = None) -> CardResult:
         await asyncio.sleep(0)
         title = payload.prompt.strip().splitlines()[0][:80] or "Новая карточка"
         markdown = (
@@ -89,9 +90,12 @@ class OpenAICardComposer:
         self._max_retries = max_retries
         self._backoff = backoff_seconds
 
-    async def compose(self, payload: CardRequestPayload) -> CardResult:  # pragma: no cover - external IO
+    async def compose(self, payload: CardRequestPayload, *, system_prompt: str | None = None) -> CardResult:  # pragma: no cover - external IO
         messages = [
-            {"role": "system", "content": self._system_prompt},
+            {
+                "role": "system",
+                "content": system_prompt or payload.system_prompt or self._system_prompt,
+            },
             {"role": "user", "content": payload.prompt if payload.context is None else f"{payload.context}\n\n{payload.prompt}"},
         ]
         attempt = 0
