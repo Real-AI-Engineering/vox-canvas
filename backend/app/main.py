@@ -126,8 +126,13 @@ class CardRequest(BaseModel):
     prompt: str
     context: Optional[str] = None
     layout: Optional[CardLayout] = None
-    type: Optional[str] = Field(default="static")  # static, counter, chart, list
+    type: Optional[str] = Field(default="static")  # static, counter, chart, list, summary, keywords, sentiment, custom
     update_rule: Optional[str] = None
+    system_prompt: Optional[str] = None
+    refresh_interval: Optional[int] = None  # Seconds
+    data_source: Optional[str] = Field(default="transcript")  # transcript, external, computed
+    auto_update: bool = False
+    update_conditions: list[str] = Field(default_factory=list)
 
 
 def _resolve_log_level(trace_enabled: bool) -> int:
@@ -352,7 +357,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         payload = CardRequestPayload(
             prompt=request.prompt,
             context=request.context,
-            system_prompt=system_prompt,
+            system_prompt=request.system_prompt or system_prompt,
+            card_type=request.type,
+            refresh_interval=request.refresh_interval,
+            data_source=request.data_source,
+            auto_update=request.auto_update,
+            update_conditions=request.update_conditions,
         )
         result = await composer.compose(payload, system_prompt=system_prompt)
 
@@ -371,6 +381,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "context": request.context,
             "layout": layout_payload,
             "metadata": result.metadata,
+            "system_prompt": request.system_prompt,
+            "refresh_interval": request.refresh_interval,
+            "data_source": request.data_source,
+            "auto_update": request.auto_update,
+            "update_conditions": request.update_conditions,
         }
         stored_card = await app.state.session_manager.register_card(card_payload)
 

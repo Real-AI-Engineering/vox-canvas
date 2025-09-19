@@ -20,6 +20,11 @@ class CardRequestPayload:
     prompt: str
     context: str | None = None
     system_prompt: str | None = None
+    card_type: str | None = None
+    refresh_interval: int | None = None  # Seconds
+    data_source: str | None = None  # transcript, external, computed
+    auto_update: bool = False
+    update_conditions: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)

@@ -18,7 +18,11 @@ export interface CardLayout {
   zIndex?: number | null;
 }
 
-export type CardType = "static" | "counter" | "chart" | "list";
+export type CardType = "static" | "counter" | "chart" | "list" | "summary" | "keywords" | "sentiment" | "custom";
+
+export type CardDataSource = "transcript" | "external" | "computed";
+
+export type DisplayMode = "canvas" | "single" | "grid" | "focus" | "carousel";
 
 export interface SessionCard {
   id: string;
@@ -32,4 +36,9 @@ export interface SessionCard {
   updatedAt?: string | null;
   metadata?: Record<string, unknown> | null;
   layout?: CardLayout | null;
+  systemPrompt?: string | null;
+  refreshInterval?: number | null; // Seconds
+  dataSource?: CardDataSource | null;
+  autoUpdate?: boolean;
+  updateConditions?: string[];
 }

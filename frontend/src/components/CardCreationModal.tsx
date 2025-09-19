@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { CardType } from "../types/session";
+import { CardTemplateLibrary } from "./CardTemplateLibrary";
+import type { CardTemplate } from "../data/cardTemplates";
 
 interface CardCreationModalProps {
   isOpen: boolean;
@@ -10,10 +12,34 @@ interface CardCreationModalProps {
 
 const CARD_TEMPLATES = [
   {
+    type: "summary" as CardType,
+    title: "Summary Card",
+    description: "AI-generated summary of recent conversation",
+    example: "Create a summary of the last 5 minutes of conversation",
+  },
+  {
+    type: "keywords" as CardType,
+    title: "Keywords Extractor",
+    description: "Extract and display key words from transcript",
+    example: "Extract the most mentioned keywords from conversation",
+  },
+  {
+    type: "sentiment" as CardType,
+    title: "Sentiment Analysis",
+    description: "Analyze emotional tone of conversation",
+    example: "Analyze the sentiment and mood of the discussion",
+  },
+  {
     type: "counter" as CardType,
     title: "Word Counter",
     description: "Counts specific words in the transcript",
     example: "Create a word counter for 'house' and display count from transcript",
+  },
+  {
+    type: "custom" as CardType,
+    title: "Custom Card",
+    description: "Fully customizable card with your own content",
+    example: "Create a custom note or reminder card",
   },
   {
     type: "static" as CardType,
@@ -39,6 +65,7 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
   const [prompt, setPrompt] = useState("");
   const [selectedType, setSelectedType] = useState<CardType>("static");
   const [showTemplates, setShowTemplates] = useState(true);
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
 
   if (!isOpen) return null;
 
@@ -54,6 +81,13 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
     setSelectedType(template.type);
     setPrompt(template.example);
     setShowTemplates(false);
+  };
+
+  const handleSelectFromLibrary = (template: CardTemplate) => {
+    setSelectedType(template.type);
+    setPrompt(template.prompt);
+    setShowTemplates(false);
+    setShowTemplateLibrary(false);
   };
 
   return (
@@ -88,12 +122,20 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
                 </button>
               ))}
             </div>
-            <div className="mt-6 flex items-center justify-center">
+            <div className="mt-6 flex items-center justify-center gap-6">
+              <button
+                onClick={() => setShowTemplateLibrary(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-canvas-accent/20 text-canvas-accent hover:bg-canvas-accent/30 transition-colors"
+              >
+                <span>📚</span>
+                <span className="text-sm">Библиотека шаблонов</span>
+              </button>
+              <div className="text-slate-400">или</div>
               <button
                 onClick={() => setShowTemplates(false)}
                 className="text-sm text-slate-300 hover:text-white"
               >
-                Or enter your own prompt →
+                Создать свой промпт →
               </button>
             </div>
           </div>
@@ -106,8 +148,12 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
                 onChange={(e) => setSelectedType(e.target.value as CardType)}
                 className="w-full rounded-xl border border-white/10 bg-canvas-background/60 px-3 py-2 text-sm text-white outline-none focus:border-canvas-accent"
               >
-                <option value="static">Regular Card</option>
+                <option value="summary">Summary Card</option>
+                <option value="keywords">Keywords</option>
+                <option value="sentiment">Sentiment Analysis</option>
                 <option value="counter">Counter</option>
+                <option value="custom">Custom Card</option>
+                <option value="static">Regular Card</option>
                 <option value="list">List</option>
                 <option value="chart">Chart</option>
               </select>
@@ -152,6 +198,12 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
           </div>
         )}
       </div>
+
+      <CardTemplateLibrary
+        isOpen={showTemplateLibrary}
+        onClose={() => setShowTemplateLibrary(false)}
+        onSelectTemplate={handleSelectFromLibrary}
+      />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import type {
   TranscriptFragment,
 } from "../types/session";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 const DEFAULT_SYSTEM_PROMPT =
   "Assume the user is speaking Russian. You are an AI assistant that generates a summary " +
   "card from the provided content or question. The card should be written in Russian. Provide a " +
@@ -73,7 +73,8 @@ function buildUrl(path: string) {
 }
 
 function buildWsUrl(path: string) {
-  const url = new URL(path, API_BASE_URL);
+  const baseUrl = API_BASE_URL || window.location.origin;
+  const url = new URL(path, baseUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.toString();
 }

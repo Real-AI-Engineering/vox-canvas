@@ -6,15 +6,17 @@ import {
   CardCarousel,
   CardCreationModal,
   ConnectionBadge,
-  DynamicCard,
   EmptyState,
   ReconnectionBanner,
   SessionStatus,
   ToastProvider,
   TranscriptList,
+  DisplayModeSelector,
+  CardCanvas,
 } from "./components";
+import { CardUpdateManager } from "./components/CardUpdateManager";
 import { useSessionStore } from "./state/sessionStore";
-import type { CardLayout, CardType, SessionCard } from "./types/session";
+import type { CardLayout, CardType, SessionCard, DisplayMode } from "./types/session";
 
 const ERROR_TOAST_ID = "session-error";
 
@@ -70,6 +72,7 @@ export default function App() {
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [showTranscriptPanel, setShowTranscriptPanel] = useState(false);
   const [promptDraft, setPromptDraft] = useState(systemPrompt);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("canvas");
 
   useEffect(() => {
     const disconnect = connectTranscription();
@@ -152,6 +155,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-canvas-background text-white">
       <ToastProvider />
+      <CardUpdateManager onCardUpdate={(card, content) => {
+        // Можно добавить дополнительную логику обновления карточек
+        console.log(`Card ${card.id} updated with new content`, content);
+      }} />
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-6 py-8">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-canvas-surface/70 p-6 backdrop-blur-lg shadow-card">
           <ReconnectionBanner status={connectionStatus} onReconnect={handleReconnect} />
@@ -162,6 +169,11 @@ export default function App() {
               <ConnectionBadge status={connectionStatus} />
             </div>
             <div className="flex flex-wrap items-center gap-3">
+              <DisplayModeSelector
+                currentMode={displayMode}
+                onModeChange={setDisplayMode}
+              />
+              <div className="w-px h-6 bg-white/10" />
               <ControlButton
                 label="New Card"
                 onClick={() => setShowCardModal(true)}
@@ -209,16 +221,14 @@ export default function App() {
               description="Add your first card by describing the desired result in the form above."
             />
           ) : (
-            <div className="relative h-full w-full">
-              {cards.map((card) => (
-                <DynamicCard
-                  key={card.id}
-                  card={card}
-                  onLayoutChange={updateCardLayout}
-                  onEdit={handleEditCard}
-                />
-              ))}
-            </div>
+            <CardCanvas
+              cards={cards}
+              displayMode={displayMode}
+              activeCardId={activeCardId}
+              onCardLayoutChange={updateCardLayout}
+              onCardEdit={handleEditCard}
+              onActiveCardChange={setActiveCard}
+            />
           )}
         </main>
 
