@@ -1,0 +1,79 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.pytest_cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.cache
+
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+backend-live.log
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Documentation
+*.md
+!README.md
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+tmp/
+temp/
+
+# Credentials (should be mounted as volume)
+google-credentials.json
+*-credentials.json
+*-creds.json
+*.pem
+*.key
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

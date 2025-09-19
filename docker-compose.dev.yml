@@ -1,0 +1,92 @@
+# Development overrides for docker-compose.yml
+services:
+  traefik:
+    command:
+      - --api.dashboard=true
+      - --api.debug=true
+      - --log.level=DEBUG
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+
+  redis:
+    ports:
+      - "6379:6379"  # Expose Redis for debugging
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    environment:
+      - VOX_TRACE=true  # Enable debug logging
+      - VOX_STT_FORCE_STUB=1  # Use stub STT for development
+      - VOX_CARD_MODE=stub  # Use stub cards for development
+    volumes:
+      # Mount source code for development (if needed)
+      - ./backend/app:/app/app:ro
+      - ./backend/google-credentials.json:/app/google-credentials.json:ro
+      - backend-logs:/app/logs
+    ports:
+      - "8000:8000"  # Direct access to backend for debugging
+
+  # Development frontend with hot reload
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: vox-frontend-dev
+    command: pnpm run dev --host 0.0.0.0
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
+      - ./frontend/package.json:/app/package.json
+    ports:
+      - "5173:5173"  # Vite dev server
+    networks:
+      - vox-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend-dev.rule=Host(`vox.local`) || Host(`localhost`)"
+      - "traefik.http.routers.frontend-dev.entrypoints=web"
+      - "traefik.http.services.frontend-dev.loadbalancer.server.port=5173"
+      - "traefik.http.routers.frontend-dev.priority=2"
+
+  # Disable production frontend in dev mode
+  frontend:
+    deploy:
+      replicas: 0
+
+  # Optional: Development database for testing
+  postgres:
+    image: postgres:15-alpine
+    container_name: vox-postgres-dev
+    environment:
+      - POSTGRES_DB=voxcanvas
+      - POSTGRES_USER=voxuser
+      - POSTGRES_PASSWORD=voxpass123
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - vox-network
+
+volumes:
+  postgres-dev-data:
+    driver: local

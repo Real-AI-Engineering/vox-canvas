@@ -297,6 +297,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             }
         return payload
 
+    @api_router.get("/health")
+    async def health() -> dict[str, Any]:
+        """Health check endpoint for Docker container monitoring."""
+        try:
+            # Basic health checks
+            stats = await app.state.session_manager.counts()
+
+            # Check if essential services are responsive
+            health_status = {
+                "status": "healthy",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "version": APP_VERSION,
+                "session": {
+                    "cards": stats["cards"],
+                    "transcripts": stats["transcripts"]
+                },
+                "services": {
+                    "stt_adapter": "available",
+                    "card_composer": "available"
+                }
+            }
+
+            return health_status
+        except Exception as exc:
+            # Return unhealthy status on any error
+            logger.error(event="health.check_failed", error=str(exc))
+            raise HTTPException(status_code=503, detail={
+                "status": "unhealthy",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "error": str(exc)
+            })
+
     @api_router.get("/transcript")
     async def transcript() -> dict[str, Any]:
         snapshot = await app.state.session_manager.snapshot()

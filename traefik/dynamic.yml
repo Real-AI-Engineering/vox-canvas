@@ -1,0 +1,67 @@
+# Traefik dynamic configuration
+http:
+  middlewares:
+    # CORS middleware for API
+    api-cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - DELETE
+          - PATCH
+        accessControlAllowOriginList:
+          - "http://localhost:5173"
+          - "http://localhost:80"
+          - "http://vox.local"
+          - "http://api.vox.local"
+        accessControlMaxAge: 86400
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowCredentials: true
+
+    # Security headers
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+
+    # Rate limiting
+    rate-limit:
+      rateLimit:
+        burst: 100
+        average: 50
+
+    # API authentication (if needed in future)
+    api-auth:
+      basicAuth:
+        users:
+          - "admin:$2y$10$example.hash.here"  # Change in production
+
+  # TLS configuration
+  tls:
+    options:
+      default:
+        minVersion: "VersionTLS12"
+        cipherSuites:
+          - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+          - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+          - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+# TCP configuration for WebSocket if needed
+tcp:
+  routers:
+    websocket:
+      rule: "HostSNI(`*`)"
+      service: "backend"
+
+  services:
+    backend:
+      loadBalancer:
+        servers:
+          - address: "backend:8000"

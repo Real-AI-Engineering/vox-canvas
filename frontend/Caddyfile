@@ -1,0 +1,45 @@
+# Caddyfile for serving React app with API proxy
+
+{
+    # Global options
+    admin off
+    auto_https disable_redirects
+}
+
+# Main site configuration
+:80 {
+    # Enable compression
+    encode gzip
+
+    # Health check endpoint for Docker
+    respond /health 200 {
+        body "OK"
+        close
+    }
+
+    # API proxy to backend
+    reverse_proxy /api/* backend:8000
+    reverse_proxy /ws/* backend:8000
+
+    # Serve static files
+    root * /srv
+    file_server
+
+    # SPA fallback - serve index.html for all non-API routes
+    try_files {path} /index.html
+
+    # Security headers
+    header {
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' ws: wss:; font-src 'self'"
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+}
