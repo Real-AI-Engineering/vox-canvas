@@ -20,8 +20,35 @@ interface SummaryCardProps {
 export function SummaryCard({ card, onLayoutChange, onEdit }: SummaryCardProps) {
   const layout = card.layout ?? DEFAULT_LAYOUT;
   const transcripts = useSessionStore((state) => state.transcripts);
-  const [summary, setSummary] = useState<string>(card.content || "");
+
+  // Extract actual content from markdown, removing stub text
+  const getCleanContent = (content: string) => {
+    if (!content) return "Waiting for content...";
+
+    // If it's stub content, show waiting message
+    if (content.includes("_Stub_: OpenAI connection will be added")) {
+      return "OpenAI/Gemini not configured. Please add API keys.";
+    }
+
+    // Remove the title line and request line from markdown
+    const lines = content.split('\n');
+    const cleanLines = lines.filter(line =>
+      !line.startsWith('# ') &&
+      !line.startsWith('- Request:') &&
+      !line.includes('_Stub_:') &&
+      line.trim() !== ''
+    );
+
+    return cleanLines.join('\n').trim() || "No content available";
+  };
+
+  const [summary, setSummary] = useState<string>(getCleanContent(card.content || ""));
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Update summary when card content changes
+  useEffect(() => {
+    setSummary(getCleanContent(card.content || ""));
+  }, [card.content]);
 
   useEffect(() => {
     if (card.autoUpdate && transcripts.length > 0) {
@@ -57,7 +84,8 @@ export function SummaryCard({ card, onLayoutChange, onEdit }: SummaryCardProps) 
 
         if (response.ok) {
           const result = await response.json();
-          setSummary(result.contentMarkdown || result.content || "");
+          const newContent = result.contentMarkdown || result.content || "";
+          setSummary(getCleanContent(newContent));
         }
       }
     } catch (error) {

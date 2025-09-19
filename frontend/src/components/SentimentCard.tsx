@@ -32,13 +32,52 @@ interface SentimentData {
 export function SentimentCard({ card, onLayoutChange, onEdit }: SentimentCardProps) {
   const layout = card.layout ?? DEFAULT_LAYOUT;
   const transcripts = useSessionStore((state) => state.transcripts);
-  const [sentiment, setSentiment] = useState<SentimentData>({
-    overall: "neutral",
-    score: 0,
-    confidence: 0,
-    emotions: { joy: 0, anger: 0, sadness: 0, fear: 0, surprise: 0 }
-  });
+
+  // Parse sentiment from content, handling stub content
+  const parseSentiment = (content: string): SentimentData => {
+    if (!content || content.includes("_Stub_: OpenAI connection will be added")) {
+      return {
+        overall: "neutral",
+        score: 0,
+        confidence: 0,
+        emotions: { joy: 0, anger: 0, sadness: 0, fear: 0, surprise: 0 }
+      };
+    }
+
+    // Simple sentiment parsing (in real app this would be more sophisticated)
+    const lowerContent = content.toLowerCase();
+    let overall: "positive" | "negative" | "neutral" = "neutral";
+    let score = 0;
+
+    if (lowerContent.includes("positive") || lowerContent.includes("happy") || lowerContent.includes("good")) {
+      overall = "positive";
+      score = 0.7;
+    } else if (lowerContent.includes("negative") || lowerContent.includes("sad") || lowerContent.includes("bad")) {
+      overall = "negative";
+      score = -0.7;
+    }
+
+    return {
+      overall,
+      score,
+      confidence: 0.8,
+      emotions: {
+        joy: overall === "positive" ? 0.8 : 0.2,
+        anger: overall === "negative" ? 0.6 : 0.1,
+        sadness: overall === "negative" ? 0.5 : 0.1,
+        fear: 0.1,
+        surprise: 0.3
+      }
+    };
+  };
+
+  const [sentiment, setSentiment] = useState<SentimentData>(parseSentiment(card.content || ""));
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Update sentiment when card content changes
+  useEffect(() => {
+    setSentiment(parseSentiment(card.content || ""));
+  }, [card.content]);
 
   useEffect(() => {
     if (card.autoUpdate && transcripts.length > 0) {

@@ -25,8 +25,39 @@ interface Keyword {
 export function KeywordsCard({ card, onLayoutChange, onEdit }: KeywordsCardProps) {
   const layout = card.layout ?? DEFAULT_LAYOUT;
   const transcripts = useSessionStore((state) => state.transcripts);
-  const [keywords, setKeywords] = useState<Keyword[]>([]);
+
+  // Extract keywords from content, handling stub content
+  const parseKeywords = (content: string): Keyword[] => {
+    if (!content) return [];
+
+    // If it's stub content, return empty array
+    if (content.includes("_Stub_: OpenAI connection will be added")) {
+      return [];
+    }
+
+    // Simple keyword extraction from markdown
+    const lines = content.split('\n');
+    const keywordLines = lines.filter(line =>
+      line.trim() &&
+      !line.startsWith('# ') &&
+      !line.startsWith('- Request:') &&
+      !line.includes('_Stub_:')
+    );
+
+    return keywordLines.map((line, index) => ({
+      word: line.replace(/[#*-]/g, '').trim(),
+      count: Math.floor(Math.random() * 10) + 1,
+      relevance: 0.9 - (index * 0.1)
+    })).slice(0, 10);
+  };
+
+  const [keywords, setKeywords] = useState<Keyword[]>(parseKeywords(card.content || ""));
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Update keywords when card content changes
+  useEffect(() => {
+    setKeywords(parseKeywords(card.content || ""));
+  }, [card.content]);
 
   useEffect(() => {
     if (card.autoUpdate && transcripts.length > 0) {
@@ -175,7 +206,9 @@ export function KeywordsCard({ card, onLayoutChange, onEdit }: KeywordsCardProps
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-white/50 text-sm">
-              Нет ключевых слов
+              {card.content?.includes("_Stub_: OpenAI connection will be added")
+                ? "OpenAI/Gemini not configured"
+                : "No keywords available"}
             </div>
           )}
         </div>

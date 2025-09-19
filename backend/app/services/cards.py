@@ -55,12 +55,40 @@ class StubCardComposer:
 
     async def compose(self, payload: CardRequestPayload, *, system_prompt: str | None = None) -> CardResult:
         await asyncio.sleep(0)
-        title = payload.prompt.strip().splitlines()[0][:80] or "New Card"
-        markdown = (
-            f"# {title}\n"
-            "- _Stub_: OpenAI connection will be added.\n"
-            f"- Request: {payload.prompt.strip()}\n"
-        )
+
+        # Generate appropriate title based on card type
+        if payload.card_type == "summary":
+            title = "Summary"
+        elif payload.card_type == "keywords":
+            title = "Keywords"
+        elif payload.card_type == "sentiment":
+            title = "Sentiment"
+        elif payload.card_type == "counter":
+            title = "Counter"
+        elif payload.card_type == "custom":
+            title = "Custom"
+        else:
+            # For static and other types, use first line of prompt as before
+            title = payload.prompt.strip().splitlines()[0][:80] or "New Card"
+
+        # Generate type-specific stub content
+        if payload.card_type == "summary":
+            markdown = "**Configuration Required**\n\nTo generate summaries, please configure OpenAI or Gemini API keys.\n\n_Stub_: OpenAI connection will be added."
+        elif payload.card_type == "keywords":
+            markdown = "**Configuration Required**\n\nTo extract keywords, please configure OpenAI or Gemini API keys.\n\n_Stub_: OpenAI connection will be added."
+        elif payload.card_type == "sentiment":
+            markdown = "**Configuration Required**\n\nTo analyze sentiment, please configure OpenAI or Gemini API keys.\n\n_Stub_: OpenAI connection will be added."
+        elif payload.card_type == "counter":
+            markdown = "**Configuration Required**\n\nTo count items, please configure OpenAI or Gemini API keys.\n\n_Stub_: OpenAI connection will be added."
+        elif payload.card_type == "custom":
+            markdown = f"**Configuration Required**\n\nTo generate custom content, please configure OpenAI or Gemini API keys.\n\nPrompt: {payload.prompt.strip()}\n\n_Stub_: OpenAI connection will be added."
+        else:
+            # For static and other types, show the original format
+            markdown = (
+                f"# {title}\n"
+                "- _Stub_: OpenAI connection will be added.\n"
+                f"- Request: {payload.prompt.strip()}\n"
+            )
         content = CardContent(title=title, markdown=markdown)
         metadata = {"mode": "stub"}
         self._logger.info(event="card.compose_stub", title=title)
@@ -108,7 +136,22 @@ class OpenAICardComposer:
         while attempt <= self._max_retries:
             try:
                 response_id, markdown = await self._compose_once(messages)
-                title = payload.prompt.strip().splitlines()[0][:80] or "New Card"
+
+                # Generate appropriate title based on card type
+                if payload.card_type == "summary":
+                    title = "Summary"
+                elif payload.card_type == "keywords":
+                    title = "Keywords"
+                elif payload.card_type == "sentiment":
+                    title = "Sentiment"
+                elif payload.card_type == "counter":
+                    title = "Counter"
+                elif payload.card_type == "custom":
+                    title = "Custom"
+                else:
+                    # For static and other types, use first line of prompt as before
+                    title = payload.prompt.strip().splitlines()[0][:80] or "New Card"
+
                 content = CardContent(title=title, markdown=markdown)
                 metadata = {
                     "mode": "openai",
