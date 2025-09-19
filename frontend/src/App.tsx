@@ -302,6 +302,7 @@ export default function App() {
         }}
         onCreateCard={editingCard ? handleUpdateCard : handleCreateCard}
         isLoading={isFetching}
+        editingCard={editingCard}
       />
     </div>
   );

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { CardType } from "../types/session";
+import { useState, useEffect } from "react";
+import type { CardType, SessionCard } from "../types/session";
 import { CardTemplateLibrary } from "./CardTemplateLibrary";
 import type { CardTemplate } from "../data/cardTemplates";
 
@@ -8,6 +8,7 @@ interface CardCreationModalProps {
   onClose: () => void;
   onCreateCard: (prompt: string, cardType: CardType) => Promise<void>;
   isLoading?: boolean;
+  editingCard?: SessionCard | null;
 }
 
 const CARD_TEMPLATES = [
@@ -61,19 +62,39 @@ const CARD_TEMPLATES = [
   },
 ];
 
-export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: CardCreationModalProps) {
+export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading, editingCard }: CardCreationModalProps) {
   const [prompt, setPrompt] = useState("");
   const [selectedType, setSelectedType] = useState<CardType>("static");
   const [showTemplates, setShowTemplates] = useState(true);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+
+  const isEditing = Boolean(editingCard);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingCard) {
+      setPrompt(editingCard.prompt || "");
+      setSelectedType(editingCard.type || "static");
+      setShowTemplates(false); // Hide templates when editing
+      setShowTemplateLibrary(false);
+    } else {
+      // Reset form when creating new card
+      setPrompt("");
+      setSelectedType("static");
+      setShowTemplates(true);
+      setShowTemplateLibrary(false);
+    }
+  }, [editingCard, isOpen]);
 
   if (!isOpen) return null;
 
   const handleCreate = async () => {
     if (!prompt.trim()) return;
     await onCreateCard(prompt, selectedType);
-    setPrompt("");
-    setShowTemplates(true);
+    if (!isEditing) {
+      setPrompt("");
+      setShowTemplates(true);
+    }
     onClose();
   };
 
@@ -97,7 +118,7 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
         onClick={(e) => e.stopPropagation()}
       >
         <header className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Create New Card</h2>
+          <h2 className="text-xl font-semibold">{isEditing ? "Edit Card" : "Create New Card"}</h2>
           <button
             onClick={onClose}
             className="text-sm text-slate-300 hover:text-white transition-colors"
@@ -106,7 +127,7 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
           </button>
         </header>
 
-        {showTemplates ? (
+        {showTemplates && !isEditing ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-400">Choose a card type or enter your own prompt</p>
             <div className="grid gap-4 md:grid-cols-2">
@@ -191,7 +212,7 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading }: 
                   disabled={!prompt.trim() || isLoading}
                   className="rounded-full bg-canvas-accent px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-canvas-accentMuted disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoading ? "Creating..." : "Create Card"}
+                  {isLoading ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Card" : "Create Card")}
                 </button>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { SessionCard, CardLayout, DisplayMode } from "../types/session";
 import { DynamicCard } from "./DynamicCard";
+import { StaticCardWrapper } from "./StaticCardWrapper";
 
 interface CardCanvasProps {
   cards: SessionCard[];
@@ -42,21 +43,13 @@ export function CardCanvas({
   const renderSingle = () => {
     if (!activeCard) return null;
 
-    const singleCardLayout: CardLayout = {
-      x: 20,
-      y: 20,
-      width: Math.max(600, window.innerWidth - 100),
-      height: Math.max(400, window.innerHeight - 200),
-      zIndex: 1,
-    };
-
     return (
-      <div className="relative h-full w-full flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl">
-          <DynamicCard
-            card={{ ...activeCard, layout: singleCardLayout }}
-            onLayoutChange={onCardLayoutChange}
+      <div className="h-full w-full flex items-center justify-center p-8 overflow-hidden">
+        <div className="w-full max-w-4xl h-full max-h-[600px]">
+          <StaticCardWrapper
+            card={activeCard}
             onEdit={onCardEdit}
+            className="w-full h-full"
           />
         </div>
       </div>
@@ -64,41 +57,30 @@ export function CardCanvas({
   };
 
   const renderGrid = () => {
-    const columns = Math.ceil(Math.sqrt(cards.length));
-    const cardWidth = Math.max(280, (window.innerWidth - 100) / columns - 20);
-    const cardHeight = Math.max(200, cardWidth * 0.7);
+    const columns = Math.min(Math.ceil(Math.sqrt(cards.length)), 4); // Max 4 columns
+    const cardHeight = 300; // Fixed height for consistent grid
 
     return (
-      <div className="p-4 h-full overflow-y-auto">
+      <div className="p-6 h-full overflow-y-auto">
         <div
-          className="grid gap-4"
+          className="grid gap-6 auto-rows-fr"
           style={{
-            gridTemplateColumns: `repeat(${columns}, minmax(${cardWidth}px, 1fr))`,
+            gridTemplateColumns: `repeat(${columns}, 1fr)`,
           }}
         >
-          {cards.map((card) => {
-            const gridLayout: CardLayout = {
-              x: 0,
-              y: 0,
-              width: cardWidth,
-              height: cardHeight,
-              zIndex: 1,
-            };
-
-            return (
-              <div
-                key={card.id}
-                className="relative"
-                style={{ width: cardWidth, height: cardHeight }}
-              >
-                <DynamicCard
-                  card={{ ...card, layout: gridLayout }}
-                  onLayoutChange={onCardLayoutChange}
-                  onEdit={onCardEdit}
-                />
-              </div>
-            );
-          })}
+          {cards.map((card) => (
+            <div
+              key={card.id}
+              className="min-h-0" // Allow flex child to shrink
+              style={{ height: cardHeight }}
+            >
+              <StaticCardWrapper
+                card={card}
+                onEdit={onCardEdit}
+                className="w-full h-full"
+              />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -107,69 +89,49 @@ export function CardCanvas({
   const renderFocus = () => {
     if (!activeCard) return null;
 
-    const focusLayout: CardLayout = {
-      x: 20,
-      y: 20,
-      width: Math.max(500, window.innerWidth * 0.6),
-      height: Math.max(350, window.innerHeight * 0.6),
-      zIndex: 2,
-    };
-
-    const thumbnailSize = 120;
     const otherCards = cards.filter(card => card.id !== activeCard.id);
+    const thumbnailHeight = 100;
 
     return (
-      <div className="relative h-full w-full">
+      <div className="relative h-full w-full flex flex-col">
         {/* Main focused card */}
-        <div className="absolute inset-4 flex items-center justify-center">
-          <DynamicCard
-            card={{ ...activeCard, layout: focusLayout }}
-            onLayoutChange={onCardLayoutChange}
-            onEdit={onCardEdit}
-          />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-4xl h-full max-h-[500px]">
+            <StaticCardWrapper
+              card={activeCard}
+              onEdit={onCardEdit}
+              className="w-full h-full"
+            />
+          </div>
         </div>
 
         {/* Thumbnail cards */}
-        <div className="absolute bottom-4 left-4 right-4 flex gap-2 overflow-x-auto pb-2">
-          {otherCards.map((card) => {
-            const thumbnailLayout: CardLayout = {
-              x: 0,
-              y: 0,
-              width: thumbnailSize,
-              height: thumbnailSize * 0.7,
-              zIndex: 1,
-            };
-
-            return (
-              <button
-                key={card.id}
-                onClick={() => onActiveCardChange(card.id)}
-                className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
-                style={{ width: thumbnailSize, height: thumbnailSize * 0.7 }}
-              >
-                <DynamicCard
-                  card={{ ...card, layout: thumbnailLayout }}
-                  onLayoutChange={() => {}} // Disable layout changes for thumbnails
-                  onEdit={onCardEdit}
-                />
-              </button>
-            );
-          })}
-        </div>
+        {otherCards.length > 0 && (
+          <div className="flex-shrink-0 p-4 border-t border-white/10">
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {otherCards.map((card) => (
+                <button
+                  key={card.id}
+                  onClick={() => onActiveCardChange(card.id)}
+                  className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity rounded-xl overflow-hidden"
+                  style={{ width: 150, height: thumbnailHeight }}
+                >
+                  <StaticCardWrapper
+                    card={card}
+                    onEdit={onCardEdit}
+                    className="w-full h-full pointer-events-none"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderCarousel = () => {
     if (!activeCard) return null;
-
-    const carouselLayout: CardLayout = {
-      x: 20,
-      y: 20,
-      width: Math.max(500, window.innerWidth - 100),
-      height: Math.max(400, window.innerHeight - 150),
-      zIndex: 1,
-    };
 
     const currentIndex = cards.findIndex(card => card.id === activeCard.id);
     const nextCard = cards[(currentIndex + 1) % cards.length];
@@ -182,13 +144,13 @@ export function CardCanvas({
           <>
             <button
               onClick={() => onActiveCardChange(prevCard.id)}
-              className="absolute left-4 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              className="absolute left-6 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition-colors"
             >
               ◀
             </button>
             <button
               onClick={() => onActiveCardChange(nextCard.id)}
-              className="absolute right-4 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              className="absolute right-6 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition-colors"
             >
               ▶
             </button>
@@ -196,22 +158,22 @@ export function CardCanvas({
         )}
 
         {/* Current card */}
-        <div className="w-full max-w-4xl px-16">
-          <DynamicCard
-            card={{ ...activeCard, layout: carouselLayout }}
-            onLayoutChange={onCardLayoutChange}
+        <div className="w-full max-w-4xl h-full max-h-[600px] px-20 py-8">
+          <StaticCardWrapper
+            card={activeCard}
             onEdit={onCardEdit}
+            className="w-full h-full"
           />
         </div>
 
         {/* Card indicator */}
         {cards.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
             {cards.map((card) => (
               <button
                 key={card.id}
                 onClick={() => onActiveCardChange(card.id)}
-                className={`w-2 h-2 rounded-full transition-colors ${
+                className={`w-3 h-3 rounded-full transition-colors ${
                   card.id === activeCard.id ? "bg-white" : "bg-white/30"
                 }`}
               />

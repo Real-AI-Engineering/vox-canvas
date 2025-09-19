@@ -15,3 +15,4 @@ export { SentimentCard } from "./SentimentCard";
 export { CustomCard } from "./CustomCard";
 export { DisplayModeSelector } from "./DisplayModeSelector";
 export { CardCanvas } from "./CardCanvas";
+export { StaticCardWrapper } from "./StaticCardWrapper";
