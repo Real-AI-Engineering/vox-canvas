@@ -50,11 +50,11 @@ class StubCardComposer:
 
     async def compose(self, payload: CardRequestPayload, *, system_prompt: str | None = None) -> CardResult:
         await asyncio.sleep(0)
-        title = payload.prompt.strip().splitlines()[0][:80] or "Новая карточка"
+        title = payload.prompt.strip().splitlines()[0][:80] or "New Card"
         markdown = (
             f"# {title}\n"
-            "- _Заглушка_: подключение к OpenAI будет добавлено.\n"
-            f"- Запрос: {payload.prompt.strip()}\n"
+            "- _Stub_: OpenAI connection will be added.\n"
+            f"- Request: {payload.prompt.strip()}\n"
         )
         content = CardContent(title=title, markdown=markdown)
         metadata = {"mode": "stub"}
@@ -103,7 +103,7 @@ class OpenAICardComposer:
         while attempt <= self._max_retries:
             try:
                 response_id, markdown = await self._compose_once(messages)
-                title = payload.prompt.strip().splitlines()[0][:80] or "Новая карточка"
+                title = payload.prompt.strip().splitlines()[0][:80] or "New Card"
                 content = CardContent(title=title, markdown=markdown)
                 metadata = {
                     "mode": "openai",

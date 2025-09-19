@@ -2,19 +2,14 @@
   "version": 1,
   "disable_existing_loggers": false,
   "formatters": {
-    "json": {
-      "()": "structlog.stdlib.ProcessorFormatter",
-      "processors": [
-        "structlog.processors.TimeStamper",
-        "structlog.stdlib.add_log_level",
-        "structlog.processors.JSONRenderer"
-      ]
+    "simple": {
+      "format": "%(levelname)s:     %(message)s"
     }
   },
   "handlers": {
     "default": {
       "class": "logging.StreamHandler",
-      "formatter": "json"
+      "formatter": "simple"
     }
   },
   "loggers": {

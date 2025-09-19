@@ -63,14 +63,14 @@ class StubAdapter(_BaseAdapter):
         self.language = language
         # Realistic workshop transcript phrases
         self.demo_phrases = [
-            "Сегодня мы рассмотрим архитектуру микросервисов и построим дом для наших сервисов",
-            "Каждый микросервис это как отдельный дом со своей инфраструктурой",
-            "Давайте вернемся к нашему примеру где дом представляет собой контейнер",
-            "В этом доме у нас есть несколько комнат каждая отвечает за свою функцию",
-            "Когда мы строим дом важно заложить правильный фундамент",
-            "Представьте что база данных это фундамент дома а API это двери",
-            "Теперь посмотрим как наш дом взаимодействует с другими домами в системе",
-            "Безопасность это как замки на дверях дома которые защищают данные",
+            "Today we will explore microservices architecture and build a house for our services",
+            "Each microservice is like a separate house with its own infrastructure",
+            "Let's go back to our example where the house represents a container",
+            "In this house we have several rooms each responsible for its own function",
+            "When we build a house it's important to lay the right foundation",
+            "Imagine that the database is the foundation of the house and the API is the doors",
+            "Now let's see how our house interacts with other houses in the system",
+            "Security is like locks on the doors of the house that protect the data",
         ]
         self.phrase_index = 0
 

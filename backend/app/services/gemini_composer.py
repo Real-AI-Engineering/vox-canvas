@@ -57,7 +57,7 @@ class GeminiCardComposer(CardComposer):
 
             # Extract title and content (simple parsing)
             lines = content_text.strip().split('\n')
-            title = lines[0].replace('#', '').strip() if lines else "Карточка"
+            title = lines[0].replace('#', '').strip() if lines else "Card"
 
             # Remove title from content if it starts with #
             if lines and lines[0].startswith('#'):
@@ -91,8 +91,8 @@ class GeminiCardComposer(CardComposer):
             self.logger.error(event="gemini.compose_error", error=str(exc))
             # Fallback to stub response
             content_obj = CardContent(
-                title="Ошибка генерации",
-                markdown=f"Не удалось сгенерировать карточку: {str(exc)}",
+                title="Generation Error",
+                markdown=f"Failed to generate card: {str(exc)}",
                 created_at=start,
             )
             return CardResult(
@@ -111,12 +111,12 @@ class GeminiCardComposer(CardComposer):
         parts = []
 
         if system_prompt:
-            parts.append(f"Системная инструкция: {system_prompt}")
+            parts.append(f"System instruction: {system_prompt}")
 
         if context:
-            parts.append(f"Контекст: {context}")
+            parts.append(f"Context: {context}")
 
-        parts.append(f"Задание: {user_prompt}")
-        parts.append("\nСоздай карточку в формате Markdown. Начни с заголовка (#), затем основной контент.")
+        parts.append(f"Task: {user_prompt}")
+        parts.append("\nCreate a card in Markdown format. Start with a header (#), then the main content.")
 
         return "\n\n".join(parts)

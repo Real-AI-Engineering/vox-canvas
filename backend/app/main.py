@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 import structlog
 from fastapi import APIRouter, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.websockets import WebSocketState
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -437,6 +438,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         audio_queue: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=8)
 
+        async def send_heartbeat() -> None:
+            """Send periodic ping frames to keep WebSocket connection alive."""
+            try:
+                while True:
+                    await asyncio.sleep(settings.websocket_heartbeat_interval)
+                    if websocket.client_state == WebSocketState.CONNECTED:
+                        await websocket.ping()
+                        _log_event(connection_logger, "ws.heartbeat_sent")
+                    else:
+                        break
+            except Exception as exc:
+                _log_event(connection_logger, "ws.heartbeat_error", error=str(exc))
+
         async def forward_transcripts() -> None:
             try:
                 async for event in adapter.run(queue_stream(audio_queue)):
@@ -444,7 +458,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     payload = {
                         "type": "transcription",
                         "text": event.text,
-                        "speaker": "Ведущий",  # Default speaker
+                        "speaker": "Host",  # Default speaker
                         "confidence": event.confidence if event.confidence is not None else 0.9,
                         "is_final": event.type is TranscriptEventType.FINAL
                     }
@@ -456,7 +470,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             "time": datetime.now(timezone.utc).strftime("%H:%M:%S"),
                             "text": event.text,
                             "confidence": event.confidence,
-                            "speaker": "Ведущий",
+                            "speaker": "Host",
                             "raw": event.raw,
                         }
                     try:
@@ -476,6 +490,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise
 
         transcript_task = asyncio.create_task(forward_transcripts())
+        heartbeat_task = asyncio.create_task(send_heartbeat())
 
         chunk_seq = 0
         try:
@@ -509,6 +524,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         finally:
             await audio_queue.put(None)
+
+            # Cancel heartbeat task
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except asyncio.CancelledError:  # pragma: no cover - cleanup
+                pass
+
             try:
                 await transcript_task
             except asyncio.CancelledError:  # pragma: no cover - cleanup

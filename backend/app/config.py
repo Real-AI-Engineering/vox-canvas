@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     logging_config: str = Field(default="logging.json", env="VOX_LOGGING_CONFIG")
     trace_enabled: bool = Field(default=False, env="VOX_TRACE")
     git_sha: str | None = Field(default=None, env="VOX_GIT_SHA")
+    websocket_heartbeat_interval: int = Field(default=30, env="VOX_WS_HEARTBEAT_INTERVAL")
+    websocket_timeout: int = Field(default=120, env="VOX_WS_TIMEOUT")
 
     class Config:
         env_file = ".env"
