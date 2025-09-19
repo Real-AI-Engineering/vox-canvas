@@ -97,7 +97,7 @@ export function SentimentCard({ card, onLayoutChange, onEdit }: SentimentCardPro
         .join(' ');
 
       if (recentText.trim()) {
-        // Simple sentiment analysis (базовый анализ, можно улучшить с помощью API)
+        // Simple sentiment analysis (basic analysis, can be improved with API)
         const positiveWords = [
           'хорошо', 'отлично', 'замечательно', 'прекрасно', 'удивительно', 'великолепно',
           'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'love'
@@ -221,7 +221,7 @@ export function SentimentCard({ card, onLayoutChange, onEdit }: SentimentCardPro
               onClick={updateSentiment}
               disabled={isUpdating}
               className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white/60 hover:text-white disabled:opacity-50"
-              title="Обновить анализ тональности"
+              title="Update sentiment analysis"
             >
               {isUpdating ? "⏳" : "🔄"}
             </button>

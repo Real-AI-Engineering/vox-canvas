@@ -156,7 +156,7 @@ export default function App() {
     <div className="min-h-screen bg-canvas-background text-white">
       <ToastProvider />
       <CardUpdateManager onCardUpdate={(card, content) => {
-        // Можно добавить дополнительную логику обновления карточек
+        // Can add additional card update logic
         console.log(`Card ${card.id} updated with new content`, content);
       }} />
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-6 py-8">

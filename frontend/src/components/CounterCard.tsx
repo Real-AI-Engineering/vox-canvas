@@ -45,12 +45,12 @@ export function CounterCard({ card, onLayoutChange, onEdit }: CounterCardProps) 
     let wordMatch = allText.match(/слов[ао]?\s+["'«]([^"'»]+)["'»]/i);
 
     if (!wordMatch) {
-      // Pattern 2: "Создай счетчик слова дом" - word after "слова"
+      // Pattern 2: "Create word counter home" - word after "word"
       wordMatch = allText.match(/слов[ао]?\s+["'«]?([а-яёА-ЯЁ]+)["'»]?/i);
     }
 
     if (!wordMatch) {
-      // Pattern 3: "Подсчет слова 'дом'" or similar patterns
+      // Pattern 3: "Count word 'home'" or similar patterns
       wordMatch = allText.match(/(?:подсчет|подсчитать|счетчик|считай|счёт)\s+слов[ао]?\s+["'«]?([а-яёА-ЯЁ]+)["'»]?/i);
     }
 
@@ -63,7 +63,7 @@ export function CounterCard({ card, onLayoutChange, onEdit }: CounterCardProps) 
       // Pattern 5: Find the most likely target word (skip common words)
       const words = allText.match(/\b([а-яёА-ЯЁ]+)\b/g);
       if (words) {
-        const skipWords = ['создай', 'счетчик', 'слова', 'слово', 'подсчет', 'считай', 'количество', 'из', 'транскрипта', 'выводи', 'и', 'для', 'карточка'];
+        const skipWords = ['create', 'counter', 'word', 'words', 'count', 'counting', 'number', 'from', 'transcript', 'display', 'and', 'for', 'card', 'создай', 'счетчик', 'слова', 'слово', 'подсчет', 'считай', 'количество', 'из', 'транскрипта', 'выводи', 'и', 'для', 'карточка'];
         const targetWords = words.filter(w => !skipWords.includes(w.toLowerCase()));
         if (targetWords.length > 0) {
           wordMatch = [targetWords[0], targetWords[0]];

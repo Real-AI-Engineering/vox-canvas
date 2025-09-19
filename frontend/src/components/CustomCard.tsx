@@ -54,7 +54,7 @@ export function CustomCard({ card, onLayoutChange, onEdit }: CustomCardProps) {
   };
 
   const getCardTheme = () => {
-    // Можно добавить разные темы на основе содержимого или метаданных
+    // Can add different themes based on content or metadata
     const themes = [
       "from-purple-500/20 to-purple-600/10 shadow-purple-500/20",
       "from-indigo-500/20 to-indigo-600/10 shadow-indigo-500/20",
@@ -96,14 +96,14 @@ export function CustomCard({ card, onLayoutChange, onEdit }: CustomCardProps) {
                 <button
                   onClick={handleSaveEdit}
                   className="text-xs text-green-400 hover:text-green-300"
-                  title="Сохранить"
+                  title="Save"
                 >
                   ✅
                 </button>
                 <button
                   onClick={handleCancelEdit}
                   className="text-xs text-red-400 hover:text-red-300"
-                  title="Отменить"
+                  title="Cancel"
                 >
                   ❌
                 </button>
@@ -113,14 +113,14 @@ export function CustomCard({ card, onLayoutChange, onEdit }: CustomCardProps) {
                 <button
                   onClick={() => setIsEditing(true)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white/60 hover:text-white"
-                  title="Редактировать содержимое"
+                  title="Edit content"
                 >
                   ✏️
                 </button>
                 <button
                   onClick={() => onEdit(card)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white/60 hover:text-white"
-                  title="Настройки карточки"
+                  title="Card settings"
                 >
                   ⚙️
                 </button>
@@ -135,7 +135,7 @@ export function CustomCard({ card, onLayoutChange, onEdit }: CustomCardProps) {
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               className="w-full h-full bg-white/10 border border-white/20 rounded-lg p-2 text-sm text-white placeholder-white/50 resize-none focus:outline-none focus:border-white/40"
-              placeholder="Введите содержимое карточки..."
+              placeholder="Enter card content..."
               autoFocus
             />
           ) : (
@@ -146,7 +146,7 @@ export function CustomCard({ card, onLayoutChange, onEdit }: CustomCardProps) {
                 <div className="flex items-center justify-center h-full text-white/50 text-sm">
                   <div className="text-center">
                     <div className="text-2xl mb-2">📝</div>
-                    <div>Нажмите ✏️ для редактирования</div>
+                    <div>Click ✏️ to edit</div>
                   </div>
                 </div>
               )}

@@ -9,10 +9,10 @@ interface CardTemplateLibraryProps {
 }
 
 const CATEGORIES = [
-  { id: "analytics", name: "Аналитика", icon: "📊", description: "Анализ и статистика" },
-  { id: "productivity", name: "Продуктивность", icon: "✅", description: "Задачи и решения" },
-  { id: "communication", name: "Коммуникации", icon: "💬", description: "Общение и взаимодействие" },
-  { id: "custom", name: "Прочее", icon: "🎨", description: "Пользовательские шаблоны" }
+  { id: "analytics", name: "Analytics", icon: "📊", description: "Analysis and statistics" },
+  { id: "productivity", name: "Productivity", icon: "✅", description: "Tasks and solutions" },
+  { id: "communication", name: "Communication", icon: "💬", description: "Communication and interaction" },
+  { id: "custom", name: "Other", icon: "🎨", description: "Custom templates" }
 ] as const;
 
 export function CardTemplateLibrary({ isOpen, onClose, onSelectTemplate }: CardTemplateLibraryProps) {
@@ -84,14 +84,14 @@ export function CardTemplateLibrary({ isOpen, onClose, onSelectTemplate }: CardT
       >
         <header className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Библиотека шаблонов карточек</h2>
-            <p className="text-sm text-slate-400 mt-1">Выберите готовый шаблон или создайте свой</p>
+            <h2 className="text-xl font-semibold">Card Template Library</h2>
+            <p className="text-sm text-slate-400 mt-1">Choose a ready-made template or create your own</p>
           </div>
           <button
             onClick={onClose}
             className="text-sm text-slate-300 hover:text-white transition-colors"
           >
-            Закрыть
+            Close
           </button>
         </header>
 
@@ -103,7 +103,7 @@ export function CardTemplateLibrary({ isOpen, onClose, onSelectTemplate }: CardT
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск шаблонов..."
+              placeholder="Search templates..."
               className="w-full rounded-xl border border-white/10 bg-canvas-background/60 px-4 py-2 text-sm text-white placeholder-white/50 outline-none focus:border-canvas-accent"
             />
           </div>
@@ -118,7 +118,7 @@ export function CardTemplateLibrary({ isOpen, onClose, onSelectTemplate }: CardT
                   : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
               }`}
             >
-              Все категории
+              All categories
             </button>
             {CATEGORIES.map(category => (
               <button
@@ -199,7 +199,7 @@ export function CardTemplateLibrary({ isOpen, onClose, onSelectTemplate }: CardT
                   {template.autoUpdate && (
                     <>
                       <span>•</span>
-                      <span>Авто-обновление</span>
+                      <span>Auto-update</span>
                     </>
                   )}
                   {template.refreshInterval && (
@@ -224,8 +224,8 @@ export function CardTemplateLibrary({ isOpen, onClose, onSelectTemplate }: CardT
             <div className="flex items-center justify-center h-32 text-slate-400">
               <div className="text-center">
                 <div className="text-2xl mb-2">🔍</div>
-                <div>Шаблоны не найдены</div>
-                <div className="text-xs mt-1">Попробуйте изменить фильтры</div>
+                <div>No templates found</div>
+                <div className="text-xs mt-1">Try changing the filters</div>
               </div>
             </div>
           )}
@@ -234,7 +234,7 @@ export function CardTemplateLibrary({ isOpen, onClose, onSelectTemplate }: CardT
         {/* Footer */}
         <footer className="mt-6 pt-4 border-t border-white/10 text-center">
           <p className="text-xs text-slate-400">
-            Найдено шаблонов: {filteredTemplates.length} из {CARD_TEMPLATES.length}
+            Templates found: {filteredTemplates.length} of {CARD_TEMPLATES.length}
           </p>
         </footer>
       </div>

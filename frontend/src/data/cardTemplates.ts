@@ -19,132 +19,132 @@ export const CARD_TEMPLATES: CardTemplate[] = [
   // Analytics Templates
   {
     id: "meeting-summary",
-    name: "Саммари встречи",
-    description: "Автоматическое создание краткого содержания встречи",
+    name: "Meeting Summary",
+    description: "Automatically create a brief meeting summary",
     type: "summary",
-    prompt: "Создай структурированное саммари встречи, включая: основные темы, принятые решения, назначенные задачи и следующие шаги.",
+    prompt: "Create a structured meeting summary including: main topics, decisions made, assigned tasks, and next steps.",
     refreshInterval: 300, // 5 minutes
     autoUpdate: true,
     category: "analytics",
-    tags: ["встреча", "саммари", "решения"],
-    example: "# Саммари встречи\n## Основные темы\n- Планирование проекта\n- Распределение ресурсов\n## Решения\n- Утвержден бюджет\n- Назначен менеджер проекта"
+    tags: ["meeting", "summary", "decisions"],
+    example: "# Meeting Summary\n## Main Topics\n- Project planning\n- Resource allocation\n## Decisions\n- Budget approved\n- Project manager assigned"
   },
   {
     id: "keyword-tracker",
-    name: "Трекер ключевых слов",
-    description: "Отслеживание упоминания важных терминов",
+    name: "Keywords Tracker",
+    description: "Track mentions of important terms",
     type: "keywords",
-    prompt: "Извлеки и отследи ключевые слова и термины из обсуждения",
+    prompt: "Extract and track keywords and terms from the discussion",
     autoUpdate: true,
     refreshInterval: 60,
     category: "analytics",
-    tags: ["ключевые слова", "анализ", "термины"],
-    example: "проект (15), бюджет (8), команда (12), дедлайн (5)"
+    tags: ["keywords", "analysis", "terms"],
+    example: "project (15), budget (8), team (12), deadline (5)"
   },
   {
     id: "sentiment-monitor",
-    name: "Монитор настроения",
-    description: "Отслеживание эмоционального тона разговора",
+    name: "Mood Monitor",
+    description: "Track the emotional tone of the conversation",
     type: "sentiment",
-    prompt: "Анализируй эмоциональный тон и настроение участников обсуждения",
+    prompt: "Analyze the emotional tone and mood of discussion participants",
     autoUpdate: true,
     refreshInterval: 120,
     category: "analytics",
-    tags: ["эмоции", "настроение", "тональность"],
-    example: "Общий тон: Позитивный (75%)\nЭнтузиазм по проекту высокий"
+    tags: ["emotions", "mood", "sentiment"],
+    example: "Overall tone: Positive (75%)\nProject enthusiasm is high"
   },
 
   // Productivity Templates
   {
     id: "action-items",
-    name: "Список действий",
-    description: "Автоматическое выделение задач и действий",
+    name: "Action Items",
+    description: "Automatically extract tasks and actions",
     type: "list",
-    prompt: "Выдели все упомянутые задачи, действия и поручения из разговора. Структурируй как чек-лист.",
-    systemPrompt: "Ты помощник по продуктивности. Извлекай конкретные, выполнимые задачи из обсуждений.",
+    prompt: "Extract all mentioned tasks, actions, and assignments from the conversation. Structure as a checklist.",
+    systemPrompt: "You are a productivity assistant. Extract specific, actionable tasks from discussions.",
     autoUpdate: true,
-    updateConditions: ["задача", "поручение", "нужно", "сделать", "выполнить"],
+    updateConditions: ["task", "assignment", "need", "do", "complete"],
     category: "productivity",
-    tags: ["задачи", "todo", "действия"],
-    example: "- [ ] Подготовить презентацию\n- [ ] Связаться с клиентом\n- [ ] Обновить документацию"
+    tags: ["tasks", "todo", "actions"],
+    example: "- [ ] Prepare presentation\n- [ ] Contact client\n- [ ] Update documentation"
   },
   {
     id: "decision-tracker",
-    name: "Трекер решений",
-    description: "Фиксация принятых решений и договоренностей",
+    name: "Decision Tracker",
+    description: "Record decisions made and agreements reached",
     type: "static",
-    prompt: "Выдели все принятые решения, договоренности и утверждения из обсуждения.",
-    updateConditions: ["решили", "договорились", "утвердили", "одобрили"],
+    prompt: "Identify all decisions made, agreements reached, and approvals given in the discussion.",
+    updateConditions: ["decided", "agreed", "approved", "confirmed"],
     category: "productivity",
-    tags: ["решения", "договоренности", "утверждения"],
-    example: "## Принятые решения\n1. Бюджет проекта: 500к рублей\n2. Дедлайн: 15 марта\n3. Команда: 5 человек"
+    tags: ["decisions", "agreements", "approvals"],
+    example: "## Decisions Made\n1. Project budget: $50,000\n2. Deadline: March 15\n3. Team size: 5 people"
   },
   {
     id: "question-collector",
-    name: "Сборщик вопросов",
-    description: "Собирает все заданные вопросы для последующего разбора",
+    name: "Question Collector",
+    description: "Collects all questions asked for subsequent review",
     type: "list",
-    prompt: "Собери все вопросы, которые были заданы в ходе обсуждения, включая те, на которые еще нет ответов.",
-    updateConditions: ["?", "вопрос", "как", "почему", "когда", "где"],
+    prompt: "Collect all questions that were asked during the discussion, including those that still need answers.",
+    updateConditions: ["?", "question", "how", "why", "when", "where"],
     category: "productivity",
-    tags: ["вопросы", "Q&A", "разъяснения"],
-    example: "## Открытые вопросы\n- Когда запускаем тестирование?\n- Кто отвечает за документацию?\n- Какой бюджет на маркетинг?"
+    tags: ["questions", "Q&A", "clarifications"],
+    example: "## Open Questions\n- When do we start testing?\n- Who is responsible for documentation?\n- What's the marketing budget?"
   },
 
   // Communication Templates
   {
     id: "participant-tracker",
-    name: "Трекер участников",
-    description: "Отслеживание активности и вклада участников",
+    name: "Participant Tracker",
+    description: "Track participant activity and contributions",
     type: "custom",
-    prompt: "Отследи активность участников: кто сколько говорил, какие идеи предлагал, какую роль играл в обсуждении.",
+    prompt: "Track participant activity: who spoke how much, what ideas they proposed, what role they played in the discussion.",
     category: "communication",
-    tags: ["участники", "активность", "вклад"],
-    example: "## Активность участников\n**Анна**: Модератор, 40% времени\n**Петр**: Эксперт, 25% времени\n**Мария**: Аналитик, 35% времени"
+    tags: ["participants", "activity", "contributions"],
+    example: "## Participant Activity\n**Anna**: Moderator, 40% speaking time\n**Peter**: Expert, 25% speaking time\n**Maria**: Analyst, 35% speaking time"
   },
   {
     id: "objection-tracker",
-    name: "Трекер возражений",
-    description: "Фиксирует возражения и контраргументы",
+    name: "Objection Tracker",
+    description: "Record objections and counterarguments",
     type: "list",
-    prompt: "Выдели все возражения, сомнения и контраргументы, высказанные в ходе обсуждения.",
-    updateConditions: ["но", "однако", "не согласен", "сомневаюсь", "проблема"],
+    prompt: "Identify all objections, doubts, and counterarguments expressed during the discussion.",
+    updateConditions: ["but", "however", "disagree", "doubt", "problem"],
     category: "communication",
-    tags: ["возражения", "проблемы", "риски"],
-    example: "## Возражения и риски\n- Сжатые сроки могут привести к ошибкам\n- Бюджет может оказаться недостаточным\n- Нехватка экспертизы в команде"
+    tags: ["objections", "problems", "risks"],
+    example: "## Objections and Risks\n- Tight deadlines may lead to errors\n- Budget may be insufficient\n- Lack of expertise in the team"
   },
 
   // Custom Templates
   {
     id: "custom-notes",
-    name: "Личные заметки",
-    description: "Карточка для личных заметок и выводов",
+    name: "Personal Notes",
+    description: "Card for personal notes and insights",
     type: "custom",
-    prompt: "Создай пространство для личных заметок и наблюдений.",
+    prompt: "Create space for personal notes and observations.",
     category: "custom",
-    tags: ["заметки", "личное", "выводы"],
-    example: "## Мои заметки\n\n*Место для ваших мыслей и выводов*"
+    tags: ["notes", "personal", "insights"],
+    example: "## My Notes\n\n*Space for your thoughts and insights*"
   },
   {
     id: "quote-collector",
-    name: "Коллекция цитат",
-    description: "Собирает важные высказывания и цитаты",
+    name: "Quote Collection",
+    description: "Collects important statements and quotes",
     type: "list",
-    prompt: "Выдели самые важные и интересные высказывания из разговора.",
+    prompt: "Identify the most important and interesting statements from the conversation.",
     category: "custom",
-    tags: ["цитаты", "высказывания", "мысли"],
-    example: "## Ключевые высказывания\n> \"Качество важнее скорости\"\n> \"Команда - наш главный актив\""
+    tags: ["quotes", "statements", "thoughts"],
+    example: "## Key Statements\n> \"Quality is more important than speed\"\n> \"Team is our main asset\""
   },
   {
     id: "word-frequency",
-    name: "Частота слов",
-    description: "Подсчет частоты использования конкретного слова",
+    name: "Word Frequency",
+    description: "Count frequency of specific word usage",
     type: "counter",
-    prompt: "Подсчитывай количество упоминаний слова 'проект' в разговоре",
+    prompt: "Count mentions of the word 'project' in the conversation",
     autoUpdate: true,
     category: "analytics",
-    tags: ["счетчик", "статистика", "частота"],
-    example: "Слово 'проект' упомянуто 15 раз"
+    tags: ["counter", "statistics", "frequency"],
+    example: "Word 'project' mentioned 15 times"
   }
 ];
 

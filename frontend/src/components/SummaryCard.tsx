@@ -70,7 +70,7 @@ export function SummaryCard({ card, onLayoutChange, onEdit }: SummaryCardProps) 
       if (transcriptText.trim()) {
         // Create summary prompt
         const summaryPrompt = card.prompt ||
-          "Создай краткое саммари последних высказываний из транскрипта. Выдели основные темы и ключевые моменты.";
+          "Create a brief summary of the latest statements from the transcript. Highlight main topics and key points.";
 
         const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/cards`, {
           method: 'POST',
@@ -140,7 +140,7 @@ export function SummaryCard({ card, onLayoutChange, onEdit }: SummaryCardProps) 
               onClick={updateSummary}
               disabled={isUpdating}
               className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white/60 hover:text-white disabled:opacity-50"
-              title="Обновить саммари"
+              title="Update summary"
             >
               {isUpdating ? "⏳" : "🔄"}
             </button>

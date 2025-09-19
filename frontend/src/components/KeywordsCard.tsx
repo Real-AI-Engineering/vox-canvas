@@ -77,7 +77,7 @@ export function KeywordsCard({ card, onLayoutChange, onEdit }: KeywordsCardProps
         .toLowerCase();
 
       if (transcriptText.trim()) {
-        // Simple keyword extraction (можно улучшить с помощью API)
+        // Simple keyword extraction (can be improved with API)
         const words = transcriptText
           .match(/[а-яёa-z]+/g) || [];
 
@@ -175,7 +175,7 @@ export function KeywordsCard({ card, onLayoutChange, onEdit }: KeywordsCardProps
               onClick={updateKeywords}
               disabled={isUpdating}
               className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white/60 hover:text-white disabled:opacity-50"
-              title="Обновить ключевые слова"
+              title="Update keywords"
             >
               {isUpdating ? "⏳" : "🔄"}
             </button>
@@ -195,7 +195,7 @@ export function KeywordsCard({ card, onLayoutChange, onEdit }: KeywordsCardProps
                 <span
                   key={index}
                   className={`px-2 py-1 rounded-full bg-white/10 border border-white/20 ${getKeywordSize(keyword.relevance)} ${getKeywordColor(keyword.count, maxCount)} transition-colors hover:bg-white/20`}
-                  title={`${keyword.count} упоминаний`}
+                  title={`${keyword.count} mentions`}
                 >
                   {keyword.word}
                   <span className="ml-1 text-xs opacity-60">

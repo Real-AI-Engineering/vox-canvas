@@ -67,20 +67,20 @@ The logs include `audio.chunk_received`, `card.compose_*`, and boot diagnostics 
 ### Session Utilities
 - `POST /api/session/reset` clears transcript and card history in memory.
 - `GET /api/status?debug=1` now surfaces `session.cards` and `session.transcripts` counts.
-- `GET /api/system-prompt` / `PUT /api/system-prompt` — получить или обновить системный промпт для генерации карточек.
-- `PATCH /api/cards/{cardId}` — сохранить изменения макета карточки (позиция/размер на холсте).
+- `GET /api/system-prompt` / `PUT /api/system-prompt` — get or update the system prompt for card generation.
+- `PATCH /api/cards/{cardId}` — save card layout changes (position/size on canvas).
 
-### Настройка STT движков
+### STT Engine Setup
 #### Google Cloud Speech-to-Text
-1. Создайте service-account c ролью `Cloud Speech Client` и скачайте JSON ключ.
-2. Поставьте переменную `GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json` перед запуском сервера.
-3. При необходимости задайте частоту дискретизации аудио через `VOX_GOOGLE_SAMPLE_RATE` (по умолчанию `16000`).
+1. Create a service account with the `Cloud Speech Client` role and download the JSON key.
+2. Set the `GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json` variable before starting the server.
+3. If needed, configure audio sample rate via `VOX_GOOGLE_SAMPLE_RATE` (default `16000`).
 
-#### Vosk (офлайн)
-1. Скачайте русскую модель Vosk (например, `vosk-model-small-ru-0.4`).
-2. Укажите переменную `VOX_VOSK_MODEL_PATH=/absolute/path/to/model`.
-3. При необходимости настройте `VOX_VOSK_SAMPLE_RATE` (по умолчанию `16000`).
-4. Для тестов и CI включайте заглушку: `VOX_STT_FORCE_STUB=1`.
+#### Vosk (offline)
+1. Download a Russian Vosk model (e.g., `vosk-model-small-ru-0.4`).
+2. Set the `VOX_VOSK_MODEL_PATH=/absolute/path/to/model` variable.
+3. If needed, configure `VOX_VOSK_SAMPLE_RATE` (default `16000`).
+4. For tests and CI, enable stub mode: `VOX_STT_FORCE_STUB=1`.
 
 ## Testing
 Initial scaffolding lives under `backend/tests/`.
@@ -105,6 +105,6 @@ uv run python scripts/dev_smoke.py
 ```
 
 ## Next Steps
-1. Подключить реальные сервисы STT (Google/Vosk) и протестировать потоковую транскрипцию с аудиопотоком браузера.
-2. Включить OpenAI Responses streaming в прод окружении + кэширование/логирование токенов.
-3. Настроить end-to-end смоук-тест (аудио → транскрипт → карточка) и запуск `make check` в CI.
+1. Connect real STT services (Google/Vosk) and test streaming transcription with browser audio streams.
+2. Enable OpenAI response streaming in production environment + token caching/logging.
+3. Set up end-to-end smoke test (audio → transcript → card) and run `make check` in CI.

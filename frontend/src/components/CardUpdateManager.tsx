@@ -46,19 +46,19 @@ export function CardUpdateManager({ onCardUpdate }: CardUpdateManagerProps) {
       // Customize prompt based on card type
       switch (card.type) {
         case "summary":
-          prompt = card.prompt || "Создай краткое саммари основных тем из контекста. Выдели ключевые моменты и решения.";
+          prompt = card.prompt || "Create a brief summary of the main topics from the context. Highlight key points and decisions.";
           break;
         case "keywords":
-          prompt = "Извлеки 5-10 ключевых слов из контекста. Отформатируй как список тегов.";
+          prompt = "Extract 5-10 keywords from the context. Format as a list of tags.";
           break;
         case "sentiment":
-          prompt = "Проанализируй тональность и настроение в контексте. Определи общий эмоциональный тон.";
+          prompt = "Analyze the sentiment and mood in the context. Determine the overall emotional tone.";
           break;
         case "counter":
           // Counter cards update differently via their own component
           return;
         default:
-          prompt = card.prompt || "Обнови содержимое карточки на основе нового контекста.";
+          prompt = card.prompt || "Update the card content based on the new context.";
       }
 
       const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/cards`, {

@@ -22,15 +22,15 @@ def test_create_card_returns_stub_content(monkeypatch):
         response = client.post(
             "/api/cards",
             json={
-                "prompt": "Карточка тест",
-                "context": "Контекст",
+                "prompt": "Test card",
+                "context": "Context",
                 "layout": {"x": 10, "y": 20, "width": 200, "height": 180},
             },
         )
     assert response.status_code == 200
     body = response.json()
-    assert body["title"] == "Карточка тест"
-    assert "Заглушка" in body["contentMarkdown"]
+    assert body["title"] == "Test card"
+    assert "Stub" in body["contentMarkdown"]
     assert body["metadata"]["mode"] == "stub"
     assert body["layout"] == {"x": 10, "y": 20, "width": 200, "height": 180, "zIndex": None, "rotation": None}
 
@@ -38,13 +38,13 @@ def test_create_card_returns_stub_content(monkeypatch):
 def test_export_contains_cards(monkeypatch):
     client = _build_app(monkeypatch)
     with client:
-        client.post("/api/cards", json={"prompt": "Экспорт", "context": None})
+        client.post("/api/cards", json={"prompt": "Export", "context": None})
         response = client.get("/api/export")
     assert response.status_code == 200
     exported = response.json()
     assert exported["session_title"] == "AI Workshop"
     assert exported["cards"], "Expected exported cards"
-    assert exported["cards"][0]["title"] == "Экспорт"
+    assert exported["cards"][0]["title"] == "Export"
 
 
 @pytest.mark.asyncio
@@ -67,7 +67,7 @@ def test_status_debug(monkeypatch):
 def test_reset_session(monkeypatch):
     client = _build_app(monkeypatch)
     with client:
-        client.post("/api/cards", json={"prompt": "Экспорт", "context": None})
+        client.post("/api/cards", json={"prompt": "Export", "context": None})
         reset_response = client.post("/api/session/reset")
     assert reset_response.status_code == 200
     payload = reset_response.json()
@@ -81,7 +81,7 @@ def test_system_prompt_roundtrip(monkeypatch):
         get_response = client.get("/api/system-prompt")
         assert get_response.status_code == 200
         default_prompt = get_response.json()["system_prompt"]
-        new_prompt = default_prompt + "\nДополнение."
+        new_prompt = default_prompt + "\nAddition."
         put_response = client.put("/api/system-prompt", json={"system_prompt": new_prompt})
         assert put_response.status_code == 200
         assert put_response.json()["system_prompt"] == new_prompt

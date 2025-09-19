@@ -149,14 +149,14 @@ export function CardCreationModal({ isOpen, onClose, onCreateCard, isLoading, ed
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-canvas-accent/20 text-canvas-accent hover:bg-canvas-accent/30 transition-colors"
               >
                 <span>📚</span>
-                <span className="text-sm">Библиотека шаблонов</span>
+                <span className="text-sm">Template Library</span>
               </button>
-              <div className="text-slate-400">или</div>
+              <div className="text-slate-400">or</div>
               <button
                 onClick={() => setShowTemplates(false)}
                 className="text-sm text-slate-300 hover:text-white"
               >
-                Создать свой промпт →
+                Create custom prompt →
               </button>
             </div>
           </div>
