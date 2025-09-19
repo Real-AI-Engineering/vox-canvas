@@ -140,12 +140,12 @@ export default function App() {
 
   const handleSavePrompt = async () => {
     await saveSystemPrompt(promptDraft.trim());
-    toast.success("Системный промпт обновлён");
+    toast.success("System prompt updated");
     setShowPromptEditor(false);
   };
 
   const handleReconnect = () => {
-    toast.info("Переподключаемся к трансляции...", { id: "ws-reconnect" });
+    toast.info("Reconnecting to stream...", { id: "ws-reconnect" });
     connectTranscription();
   };
 
@@ -157,28 +157,28 @@ export default function App() {
           <ReconnectionBanner status={connectionStatus} onReconnect={handleReconnect} />
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
-              <p className="text-sm text-slate-400">Состояние сессии</p>
+              <p className="text-sm text-slate-400">Session Status</p>
               <SessionStatus state={sessionState} />
               <ConnectionBadge status={connectionStatus} />
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <ControlButton
-                label="Новая карточка"
+                label="New Card"
                 onClick={() => setShowCardModal(true)}
               />
               <ControlButton
-                label={sessionState === "listening" ? "Пауза" : "Запись"}
+                label={sessionState === "listening" ? "Pause" : "Record"}
                 onClick={toggleSession}
                 variant="ghost"
               />
-              <ControlButton label="Сброс" onClick={resetSession} variant="ghost" disabled={isFetching} />
+              <ControlButton label="Reset" onClick={resetSession} variant="ghost" disabled={isFetching} />
               <ControlButton
-                label="Система"
+                label="System"
                 onClick={() => setShowPromptEditor(true)}
                 variant="ghost"
               />
               <ControlButton
-                label={showTranscriptPanel ? "Скрыть транскрипт" : "Показать транскрипт"}
+                label={showTranscriptPanel ? "Hide Transcript" : "Show Transcript"}
                 onClick={() => setShowTranscriptPanel((prev) => !prev)}
                 variant="ghost"
               />
@@ -186,15 +186,15 @@ export default function App() {
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Карточек</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Cards</p>
               <p className="text-2xl font-semibold">{cards.length}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Фрагментов речи</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Speech Fragments</p>
               <p className="text-2xl font-semibold">{transcripts.length}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Последнее обновление</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Last Update</p>
               <p className="text-2xl font-semibold">
                 {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
@@ -205,8 +205,8 @@ export default function App() {
         <main className="relative flex-1 overflow-hidden rounded-3xl border border-white/10 bg-canvas-surface/40 backdrop-blur">
           {cards.length === 0 ? (
             <EmptyState
-              title="Карточек ещё нет"
-              description="Добавьте первую карточку, описав желаемый результат в форме выше."
+              title="No cards yet"
+              description="Add your first card by describing the desired result in the form above."
             />
           ) : (
             <div className="relative h-full w-full">
@@ -226,7 +226,7 @@ export default function App() {
           <section className="rounded-3xl border border-white/10 bg-canvas-surface/70 p-6 backdrop-blur-lg">
             <header className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Текущая карточка</h2>
+                <h2 className="text-lg font-semibold">Current Card</h2>
                 <p className="text-xs text-slate-400">
                   {new Date(activeCard.createdAt).toLocaleString()}
                 </p>
@@ -244,9 +244,9 @@ export default function App() {
         <aside className="fixed inset-0 z-40 flex items-center justify-end bg-black/40 backdrop-blur" onClick={() => setShowTranscriptPanel(false)}>
           <div className="h-full w-full max-w-md overflow-hidden border-l border-white/10 bg-canvas-surface/95 p-6" onClick={(event) => event.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">История транскрипта</h2>
+              <h2 className="text-lg font-semibold">Transcript History</h2>
               <button className="text-sm text-slate-300 hover:text-white" onClick={() => setShowTranscriptPanel(false)}>
-                Закрыть
+                Close
               </button>
             </div>
             <TranscriptList fragments={transcripts} />
@@ -261,9 +261,9 @@ export default function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <header className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Системный промпт</h2>
+              <h2 className="text-lg font-semibold">System Prompt</h2>
               <button className="text-sm text-slate-300 hover:text-white" onClick={() => setShowPromptEditor(false)}>
-                Закрыть
+                Close
               </button>
             </header>
             <textarea
@@ -273,9 +273,9 @@ export default function App() {
               className="w-full rounded-2xl border border-white/10 bg-canvas-background/80 p-4 text-sm text-white outline-none focus:border-canvas-accent"
             />
             <div className="mt-4 flex items-center justify-end gap-3">
-              <ControlButton label="Отмена" onClick={() => setShowPromptEditor(false)} variant="ghost" />
+              <ControlButton label="Cancel" onClick={() => setShowPromptEditor(false)} variant="ghost" />
               <ControlButton
-                label={isSavingSystemPrompt ? "Сохранение..." : "Сохранить"}
+                label={isSavingSystemPrompt ? "Saving..." : "Save"}
                 onClick={handleSavePrompt}
                 disabled={isSavingSystemPrompt}
               />

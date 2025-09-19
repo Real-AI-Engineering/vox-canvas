@@ -5,9 +5,9 @@ interface SessionStatusProps {
 }
 
 const labels: Record<SessionState, string> = {
-  idle: "Ожидание старта",
-  listening: "Запись активна",
-  paused: "Пауза",
+  idle: "Waiting to start",
+  listening: "Recording active",
+  paused: "Paused",
 };
 
 const colors: Record<SessionState, string> = {

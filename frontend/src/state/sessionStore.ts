@@ -22,6 +22,25 @@ interface CreateCardOptions {
   type?: CardType;
 }
 
+interface BackendCard {
+  cardId?: string;
+  id?: string;
+  title?: string;
+  contentMarkdown?: string;
+  content?: string;
+  type?: CardType;
+  prompt?: string;
+  update_rule?: string;
+  updateRule?: string;
+  liveData?: Record<string, unknown>;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+  layout?: CardLayout;
+}
+
 interface SessionStore {
   sessionState: SessionState;
   connectionStatus: ConnectionStatus;
@@ -34,6 +53,9 @@ interface SessionStore {
   error: string | null;
   pendingFragmentId: string | null;
   cleanupSocket: (() => void) | null;
+  reconnectAttempts: number;
+  reconnectTimer: NodeJS.Timeout | null;
+  maxReconnectAttempts: number;
   setActiveCard: (id: string) => void;
   toggleSession: () => void;
   resetSession: () => Promise<void>;
@@ -75,6 +97,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   error: null,
   pendingFragmentId: null,
   cleanupSocket: null,
+  reconnectAttempts: 0,
+  reconnectTimer: null,
+  maxReconnectAttempts: 5,
   setActiveCard: (id) => set({ activeCardId: id }),
   toggleSession: async () => {
     const state = get();
@@ -123,7 +148,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         const data = await cardsRes.json();
         const rawCards = data.cards ?? data ?? [];
         // Transform backend format to frontend format
-        const cards: SessionCard[] = rawCards.map((card: any) => ({
+        const cards: SessionCard[] = rawCards.map((card: BackendCard) => ({
           id: String(card.cardId ?? card.id),
           title: card.title,
           content: card.contentMarkdown ?? card.content,
@@ -184,7 +209,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       const payload = await response.json();
       const newCard: SessionCard = {
         id: String(payload.cardId ?? payload.id ?? `card-${Date.now()}`),
-        title: payload.title ?? "Карточка",
+        title: payload.title ?? "Card",
         content: payload.contentMarkdown ?? payload.content ?? "",
         type: payload.type ?? options?.type ?? "static",
         prompt: prompt,
@@ -223,7 +248,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         prompt: updates.prompt,
         type: updates.type || "static",
         update_rule: updates.updateRule || null,
-        context: updates.context || null,
+        context: null,
       };
       await fetch(buildUrl(`/api/cards/${encodeURIComponent(cardId)}`), {
         method: "PUT",
@@ -271,69 +296,162 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
   connectTranscription: () => {
-    const previousCleanup = get().cleanupSocket;
+    const state = get();
+
+    // Clear any existing connection
+    const previousCleanup = state.cleanupSocket;
     if (previousCleanup) {
       previousCleanup();
+    }
+
+    // Clear any existing reconnect timer
+    if (state.reconnectTimer) {
+      clearTimeout(state.reconnectTimer);
     }
 
     const wsUrl = buildWsUrl("/ws/transcription");
     let socket: WebSocket | null = null;
     let closed = false;
 
-    try {
-      socket = new WebSocket(wsUrl);
-    } catch (error) {
-      console.warn("WebSocket connection failed", error);
-      set({ connectionStatus: "error" });
-      return () => undefined;
-    }
+    const scheduleReconnect = () => {
+      const currentState = get();
 
-    set({ connectionStatus: "connecting", cleanupSocket: null });
+      // Only attempt to reconnect if recording is active and we haven't exceeded max attempts
+      if (currentState.sessionState === "listening" && currentState.reconnectAttempts < currentState.maxReconnectAttempts) {
+        const delay = Math.min(1000 * Math.pow(2, currentState.reconnectAttempts), 30000); // Exponential backoff, max 30s
 
-    // Set up audio recorder to send data via WebSocket
-    audioRecorder.onData((audioData) => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(audioData);
+        console.log(`Scheduling reconnect attempt ${currentState.reconnectAttempts + 1} in ${delay}ms`);
+
+        const timer = setTimeout(() => {
+          set({ reconnectAttempts: currentState.reconnectAttempts + 1 });
+          attemptConnection(true);
+        }, delay);
+
+        set({ reconnectTimer: timer });
+      } else {
+        console.log("Max reconnect attempts reached or recording not active");
+        set({ connectionStatus: "error", error: "Connection failed - max retries exceeded" });
       }
-    });
-
-    const cleanup = () => {
-      closed = true;
-      socket?.close();
-      useSessionStore.setState({ connectionStatus: "disconnected", cleanupSocket: null });
     };
 
-    socket.addEventListener("open", () => {
+    const handleConnectionError = () => {
       if (closed) return;
-      useSessionStore.setState({ connectionStatus: "connected", error: null, cleanupSocket: cleanup });
-    });
 
-    socket.addEventListener("message", (event) => {
-      if (closed) return;
+      const currentState = get();
+
+      // Enable audio buffering if recording is active
+      if (currentState.sessionState === "listening") {
+        audioRecorder.enableBuffering();
+        scheduleReconnect();
+      } else {
+        set({ connectionStatus: "error", error: "Connection failed" });
+      }
+    };
+
+    const attemptConnection = (isReconnect = false) => {
+      if (isReconnect) {
+        set({ connectionStatus: "reconnecting" });
+      } else {
+        set({ connectionStatus: "connecting", reconnectAttempts: 0 });
+      }
+
       try {
-        const payload = JSON.parse(event.data);
-        const text: string | undefined = payload.text;
-        const eventType: string | undefined = payload.event ?? payload.type;
-        const confidence: number | undefined = payload.confidence ?? payload.confidence_score;
-        const isFinalFlag =
-          payload.is_final === true ||
-          payload.final === true ||
-          eventType === "transcript" ||
-          eventType === "final";
+        socket = new WebSocket(wsUrl);
+      } catch (error) {
+        console.warn("WebSocket connection failed", error);
+        handleConnectionError();
+        return;
+      }
 
-        if (!text) {
+      // Set up audio recorder to send data via WebSocket
+      audioRecorder.onData((audioData) => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(audioData);
+        }
+      });
+
+      socket.addEventListener("open", () => {
+        if (closed) return;
+
+        console.log("WebSocket connected successfully");
+
+        // Reset reconnection attempts on successful connection
+        set({
+          connectionStatus: "connected",
+          error: null,
+          reconnectAttempts: 0,
+          cleanupSocket: cleanup
+        });
+
+        // Send any buffered audio data
+        const bufferedData = audioRecorder.flushBuffer();
+        if (bufferedData.length > 0) {
+          console.log(`Sending ${bufferedData.length} buffered audio chunks`);
+          bufferedData.forEach(chunk => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.send(chunk);
+            }
+          });
+        }
+
+        // Re-enable normal audio data flow
+        audioRecorder.disableBuffering();
+      });
+
+      socket.addEventListener("message", (event) => {
+        if (closed) return;
+
+        // Handle ping/pong for heartbeat
+        if (event.data === "ping") {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send("pong");
+          }
           return;
         }
 
-        const timestamp = nowLabel();
+        try {
+          const payload = JSON.parse(event.data);
+          const text: string | undefined = payload.text;
+          const eventType: string | undefined = payload.event ?? payload.type;
+          const confidence: number | undefined = payload.confidence ?? payload.confidence_score;
+          const isFinalFlag =
+            payload.is_final === true ||
+            payload.final === true ||
+            eventType === "transcript" ||
+            eventType === "final";
 
-        // Use useSessionStore.setState directly to avoid closure issues
-        useSessionStore.setState((state) => {
-          const partialId = state.pendingFragmentId;
+          if (!text) {
+            return;
+          }
 
-          if (!isFinalFlag) {
+          const timestamp = nowLabel();
+
+          // Use useSessionStore.setState directly to avoid closure issues
+          useSessionStore.setState((state) => {
+            const partialId = state.pendingFragmentId;
+
+            if (!isFinalFlag) {
+              const id = partialId ?? `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+              const fragment: TranscriptFragment = {
+                id,
+                time: timestamp,
+                text,
+                speaker: "Live",
+                confidence: confidence ?? null,
+              };
+
+              const transcripts = partialId
+                ? state.transcripts.map((item) => (item.id === partialId ? fragment : item))
+                : [...state.transcripts, fragment];
+
+              return {
+                transcripts: transcripts.slice(-200),
+                pendingFragmentId: id,
+              };
+            }
+
             const id = partialId ?? `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-            const fragment: TranscriptFragment = {
+            const finalFragment: TranscriptFragment = {
               id,
               time: timestamp,
               text,
@@ -342,49 +460,54 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             };
 
             const transcripts = partialId
-              ? state.transcripts.map((item) => (item.id === partialId ? fragment : item))
-              : [...state.transcripts, fragment];
+              ? state.transcripts.map((item) => (item.id === partialId ? finalFragment : item))
+              : [...state.transcripts, finalFragment];
 
             return {
               transcripts: transcripts.slice(-200),
-              pendingFragmentId: id,
+              pendingFragmentId: null,
             };
-          }
+          });
+        } catch (error) {
+          console.warn("Failed to parse websocket payload", error);
+        }
+      });
 
-          const id = partialId ?? `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-          const finalFragment: TranscriptFragment = {
-            id,
-            time: timestamp,
-            text,
-            speaker: "Live",
-            confidence: confidence ?? null,
-          };
+      socket.addEventListener("close", () => {
+        if (closed) return;
+        console.log("WebSocket connection closed");
+        handleConnectionError();
+      });
 
-          const transcripts = partialId
-            ? state.transcripts.map((item) => (item.id === partialId ? finalFragment : item))
-            : [...state.transcripts, finalFragment];
+      socket.addEventListener("error", (event) => {
+        if (closed) return;
+        console.error("WebSocket error", event);
+        handleConnectionError();
+      });
+    };
 
-          return {
-            transcripts: transcripts.slice(-200),
-            pendingFragmentId: null,
-          };
-        });
-      } catch (error) {
-        console.warn("Failed to parse websocket payload", error);
+    const cleanup = () => {
+      closed = true;
+      socket?.close();
+
+      const currentState = get();
+      if (currentState.reconnectTimer) {
+        clearTimeout(currentState.reconnectTimer);
       }
-    });
 
-    socket.addEventListener("close", () => {
-      if (closed) return;
-      useSessionStore.setState({ connectionStatus: "disconnected", error: "WebSocket соединение закрыто", cleanupSocket: null });
-    });
+      audioRecorder.disableBuffering();
 
-    socket.addEventListener("error", (event) => {
-      console.error("WebSocket error", event);
-      useSessionStore.setState({ connectionStatus: "error", error: "Ошибка соединения с трансляцией", cleanupSocket: null });
-    });
+      useSessionStore.setState({
+        connectionStatus: "disconnected",
+        cleanupSocket: null,
+        reconnectTimer: null,
+        reconnectAttempts: 0
+      });
+    };
 
-    set({ cleanupSocket: cleanup });
+    // Start initial connection
+    attemptConnection();
+
     return cleanup;
   },
 }));

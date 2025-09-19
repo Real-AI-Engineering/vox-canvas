@@ -6,10 +6,11 @@ interface ReconnectionBannerProps {
 }
 
 const labels: Record<ConnectionStatus, string> = {
-  connected: "Соединение установлено",
-  connecting: "Попытка переподключения...",
-  disconnected: "Соединение потеряно",
-  error: "Ошибка соединения",
+  connected: "Connection established",
+  connecting: "Attempting to reconnect...",
+  disconnected: "Connection lost",
+  error: "Connection error",
+  reconnecting: "Reconnecting...",
 };
 
 export function ReconnectionBanner({ status, onReconnect }: ReconnectionBannerProps) {
@@ -27,7 +28,7 @@ export function ReconnectionBanner({ status, onReconnect }: ReconnectionBannerPr
         onClick={onReconnect}
         disabled={isRetrying}
       >
-        {isRetrying ? "Переподключение..." : "Повторить"}
+        {isRetrying ? "Reconnecting..." : "Retry"}
       </button>
     </div>
   );

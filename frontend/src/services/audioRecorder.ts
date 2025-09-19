@@ -5,6 +5,9 @@ export class AudioRecorder {
   private audioInput: MediaStreamAudioSourceNode | null = null;
   private isRecording = false;
   private onDataCallback: ((data: ArrayBuffer) => void) | null = null;
+  private onBufferedDataCallback: ((data: ArrayBuffer) => void) | null = null;
+  private audioBuffer: ArrayBuffer[] = [];
+  private maxBufferSize = 50; // Max audio chunks to buffer
 
   async startRecording(): Promise<boolean> {
     try {
@@ -37,9 +40,17 @@ export class AudioRecorder {
           pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
 
-        // Send PCM16 data to callback
+        // Send PCM16 data to callback or buffer it
         if (this.onDataCallback) {
           this.onDataCallback(pcmData.buffer);
+        } else if (this.onBufferedDataCallback) {
+          // Buffer audio when main callback is not available (e.g., during reconnection)
+          this.audioBuffer.push(pcmData.buffer);
+
+          // Limit buffer size to prevent memory issues
+          if (this.audioBuffer.length > this.maxBufferSize) {
+            this.audioBuffer.shift(); // Remove oldest chunk
+          }
         }
       };
 
@@ -79,6 +90,28 @@ export class AudioRecorder {
 
   onData(callback: (data: ArrayBuffer) => void): void {
     this.onDataCallback = callback;
+  }
+
+  onBufferedData(callback: (data: ArrayBuffer) => void): void {
+    this.onBufferedDataCallback = callback;
+  }
+
+  enableBuffering(): void {
+    this.onDataCallback = null;
+  }
+
+  disableBuffering(): void {
+    this.onBufferedDataCallback = null;
+  }
+
+  flushBuffer(): ArrayBuffer[] {
+    const bufferedData = [...this.audioBuffer];
+    this.audioBuffer = [];
+    return bufferedData;
+  }
+
+  getBufferSize(): number {
+    return this.audioBuffer.length;
   }
 
   isActive(): boolean {

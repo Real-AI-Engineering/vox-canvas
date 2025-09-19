@@ -1,5 +1,5 @@
 export type SessionState = "idle" | "listening" | "paused";
-export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error" | "reconnecting";
 
 export interface TranscriptFragment {
   id: string;

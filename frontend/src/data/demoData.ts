@@ -4,34 +4,34 @@ export const demoTranscripts = [
   {
     id: "demo-t-1",
     time: "10:05",
-    text: "Сегодня разберём архитектуру AI Workshop Assistant и синхронизацию между фронтендом и бэкендом.",
-    speaker: "Ведущий",
+    text: "Today we'll explore the AI Workshop Assistant architecture and synchronization between frontend and backend.",
+    speaker: "Host",
   },
   {
     id: "demo-t-2",
     time: "10:07",
-    text: "Карточки генерируются по запросу, поэтому нам нужен быстрый отклик от OpenAI и локальное кеширование.",
-    speaker: "Ведущий",
+    text: "Cards are generated on demand, so we need fast OpenAI response and local caching.",
+    speaker: "Host",
   },
   {
     id: "demo-t-3",
     time: "10:09",
-    text: "Участники смогут видеть новую карточку на проекторе и возвращаться к истории через боковую панель.",
-    speaker: "Ведущий",
+    text: "Participants will be able to see new cards on the projector and return to history through the side panel.",
+    speaker: "Host",
   },
 ];
 
 export const demoCards = [
   {
     id: "demo-c-1",
-    title: "Архитектура воркшопа",
-    content: `# Архитектура воркшопа\n- Фронтенд на React отображает карточки и транскрипт.\n- WebSocket поток обрабатывает аудио и обновления.\n- FastAPI координирует STT и генерацию контента.`,
+    title: "Workshop Architecture",
+    content: `# Workshop Architecture\n- React frontend displays cards and transcripts.\n- WebSocket stream processes audio and updates.\n- FastAPI coordinates STT and content generation.`,
     createdAt: new Date().toISOString(),
   },
   {
     id: "demo-c-2",
-    title: "Задачи MVP",
-    content: `# Задачи MVP\n- Реальное время: минимальная задержка между речью и текстом.\n- Контроль сессии: старт/стоп записи, экспорт JSON.\n- Визуализация: крупные карточки + навигация для аудитории.`,
+    title: "MVP Tasks",
+    content: `# MVP Tasks\n- Real-time: minimal delay between speech and text.\n- Session control: start/stop recording, JSON export.\n- Visualization: large cards + navigation for audience.`,
     createdAt: new Date().toISOString(),
   },
 ];

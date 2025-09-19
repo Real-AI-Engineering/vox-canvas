@@ -92,7 +92,7 @@ export function CounterCard({ card, onLayoutChange, onEdit }: CounterCardProps) 
         console.log(`Fragment ${idx}:`, fragment.text);
 
         // Create regex to match word with any case and declensions
-        // For Russian words like "дом", also match "дома", "доме", "домов", etc.
+        // For words like "house", also match word variations and declensions
         // Escape special regex characters in the word
         const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         // Also try exact match and with declensions
@@ -111,7 +111,7 @@ export function CounterCard({ card, onLayoutChange, onEdit }: CounterCardProps) 
       setCount(totalCount);
       console.log(`📊 Total count for "${word}": ${totalCount} occurrences in ${transcripts.length} transcripts`);
     }
-  }, [transcripts, card.updateRule, card.prompt, card.content]);
+  }, [transcripts, card.updateRule, card.prompt, card.content, card.title]);
 
   const handleChange = useCallback(
     (next: Partial<CardLayout>) => {
@@ -165,13 +165,13 @@ export function CounterCard({ card, onLayoutChange, onEdit }: CounterCardProps) 
               {targetWord ? `"${targetWord}"` : "..."}
             </div>
             <div className="text-xs text-white/60">
-              Счетчик слов
+              Word Counter
             </div>
           </div>
         </div>
 
         <footer className="text-xs text-white/40">
-          Обновлено: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          Updated: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </footer>
       </article>
     </Rnd>
